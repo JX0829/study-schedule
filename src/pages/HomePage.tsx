@@ -30,9 +30,7 @@ export function HomePage() {
   const getChildPoints = usePointsStore(state => state.getChildPoints);
   const earnPoints = usePointsStore(state => state.earnPoints);
   
-  // 新任务表单
-  const [newTaskName, setNewTaskName] = useState('');
-  const [newTaskPoints, setNewTaskPoints] = useState(0);
+  // 新任务选择的时间段
   const [newTaskSlotId, setNewTaskSlotId] = useState('');
   
   // 获取孩子用户
@@ -101,31 +99,7 @@ export function HomePage() {
     setShowAddTask(false);
   };
   
-  // 自定义添加任务
-  const handleAddCustomTask = () => {
-    if (!family || !child || !newTaskName || !newTaskSlotId) return;
-    
-    const slot = timeSlots.find(s => s.id === newTaskSlotId);
-    if (!slot) return;
-    
-    addDailyTask({
-      familyId: family.id,
-      childId: child.id,
-      date: currentDate,
-      name: newTaskName,
-      type: 'habit',
-      points: newTaskPoints,
-      timeSlotId: newTaskSlotId,
-      timeSlotStart: slot.startTime,
-      timeSlotEnd: slot.endTime,
-      status: 'pending',
-    });
-    
-    setNewTaskName('');
-    setNewTaskPoints(0);
-    setNewTaskSlotId('');
-    setShowAddTask(false);
-  };
+
   
   // 标记完成（自己确认）
   const handleMarkComplete = (taskId: string) => {
@@ -209,9 +183,9 @@ export function HomePage() {
             />
           )}
           
-          {/* 添加任务按钮 */}
+          {/* 选择任务按钮 */}
           <Button className="w-full mb-4" onClick={() => setShowAddTask(true)}>
-            + 创建今日任务
+            + 选择今日任务
           </Button>
           
           {/* 任务列表 */}
@@ -397,21 +371,24 @@ export function HomePage() {
       {/* 添加任务模态框 */}
       <Modal 
         isOpen={showAddTask}
-        onClose={() => setShowAddTask(false)}
-        title="创建任务"
+        onClose={() => {
+          setShowAddTask(false);
+          setNewTaskSlotId('');
+        }}
+        title="选择任务"
       >
         {/* 选择时间段 */}
         <div className="mb-4">
-          <label className="text-gray-500 text-sm block mb-2">时间段</label>
+          <label className="text-gray-500 text-sm block mb-2">选择时间段</label>
           <div className="flex gap-2">
             {timeSlots.map(slot => (
               <button
                 key={slot.id}
                 onClick={() => setNewTaskSlotId(slot.id)}
-                className={`px-4 py-2 rounded-lg ${
+                className={`px-4 py-2 rounded-lg transition-colors ${
                   newTaskSlotId === slot.id 
                     ? 'bg-primary-400 text-white' 
-                    : 'bg-gray-100 text-gray-600'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 {slot.name}
@@ -420,55 +397,39 @@ export function HomePage() {
           </div>
         </div>
         
-        {/* 从模板选择 */}
-        {newTaskSlotId && templates.length > 0 && (
-          <div className="mb-4">
-            <label className="text-gray-500 text-sm block mb-2">从模板选择</label>
-            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+        {/* 从模板选择任务 */}
+        {newTaskSlotId && templates.length > 0 ? (
+          <div>
+            <label className="text-gray-500 text-sm block mb-2">选择任务模板</label>
+            <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
               {templates.map(template => (
                 <button
                   key={template.id}
-                  onClick={() => handleSelectTemplate(template.id, newTaskSlotId)}
-                  className="border rounded-lg p-2 text-left hover:bg-gray-50"
+                  onClick={() => {
+                    handleSelectTemplate(template.id, newTaskSlotId);
+                    setShowAddTask(false);
+                    setNewTaskSlotId('');
+                  }}
+                  className="border rounded-lg p-3 text-left hover:bg-primary-50 hover:border-primary-300 transition-colors"
                 >
-                  <div className="font-medium">{template.name}</div>
-                  <Badge color="primary" size="sm">+{template.points}分</Badge>
+                  <div className="font-medium text-gray-800">{template.name}</div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge color={template.type === 'homework' ? 'blue' : template.type === 'practice' ? 'purple' : 'success'} size="sm">
+                      {template.type === 'homework' ? '作业' : template.type === 'practice' ? '练习' : '习惯'}
+                    </Badge>
+                    <Badge color="primary" size="sm">+{template.points}分</Badge>
+                  </div>
                 </button>
               ))}
             </div>
           </div>
-        )}
-        
-        {/* 自定义任务 */}
-        {newTaskSlotId && (
-          <div className="border-t pt-4">
-            <label className="text-gray-500 text-sm block mb-2">自定义任务</label>
-            <input
-              type="text"
-              value={newTaskName}
-              onChange={(e) => setNewTaskName(e.target.value)}
-              placeholder="任务名称"
-              className="w-full px-3 py-2 border rounded-lg mb-2"
-            />
-            <div className="flex items-center gap-2">
-              <label className="text-gray-500 text-sm">分值</label>
-              <input
-                type="number"
-                value={newTaskPoints}
-                onChange={(e) => setNewTaskPoints(parseInt(e.target.value) || 0)}
-                className="px-3 py-2 border rounded-lg w-20"
-              />
-              <span className="text-gray-500">分</span>
-            </div>
-            <Button 
-              className="w-full mt-3" 
-              onClick={handleAddCustomTask}
-              disabled={!newTaskName || newTaskPoints <= 0}
-            >
-              添加自定义任务
-            </Button>
+        ) : newTaskSlotId && templates.length === 0 ? (
+          <div className="text-center py-8">
+            <Icon name="calendar" size={40} className="text-gray-300 mb-3" />
+            <p className="text-gray-500">家长还没有设置任务模板</p>
+            <p className="text-gray-400 text-sm mt-1">请让家长先在家长端添加任务模板</p>
           </div>
-        )}
+        ) : null}
       </Modal>
 
       {/* 签字确认模态框 */}
