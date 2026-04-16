@@ -1,30 +1,39 @@
 /**
- * 首页 - 当日任务规划
+ * 孩子端首页 - 自主创建任务 + 家长签字确认
  */
 
 import { useState, useMemo } from 'react';
-import { Page, Card, Button, TaskList, TaskProgress, DateHeader, TabBar, Badge, PointsBadge, Icon } from '@/components';
-import { useTaskStore, usePointsStore, useFamilyStore } from '@/store';
+import { Page, Card, Button, TaskProgress, DateHeader, TabBar, Badge, PointsBadge, Icon, Modal } from '@/components';
+import { SignPasswordInput } from '@/components/sign';
+import { useTaskStore, usePointsStore, useFamilyStore, useTemplateStore } from '@/store';
 import { getToday, formatDate } from '@/utils/date';
-import { presetTemplates, defaultRewards } from '@/utils/presets';
 import type { DailyTask } from '@/types';
 
 export function HomePage() {
   const [currentDate, setCurrentDate] = useState(getToday());
   const [activeTab, setActiveTab] = useState('tasks');
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [showSignModal, setShowSignModal] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   
+  // Store
   const family = useFamilyStore(state => state.family);
   const users = useFamilyStore(state => state.users);
   const currentUser = useFamilyStore(state => state.currentUser);
-  const templates = useTaskStore(state => state.templates);
+  const templates = useTemplateStore(state => state.taskTemplates);
+  const rewardTemplates = useTemplateStore(state => state.rewardTemplates);
   const timeSlots = useTaskStore(state => state.timeSlots);
   const dailyTasks = useTaskStore(state => state.dailyTasks);
   const getDailyTasksByDate = useTaskStore(state => state.getDailyTasksByDate);
   const addDailyTask = useTaskStore(state => state.addDailyTask);
-  const submitTask = useTaskStore(state => state.submitTask);
-  const confirmTask = useTaskStore(state => state.confirmTask);
-  const copyYesterdayTasks = useTaskStore(state => state.copyYesterdayTasks);
+  const updateDailyTaskStatus = useTaskStore(state => state.updateDailyTaskStatus);
   const getChildPoints = usePointsStore(state => state.getChildPoints);
+  const earnPoints = usePointsStore(state => state.earnPoints);
+  
+  // 新任务表单
+  const [newTaskName, setNewTaskName] = useState('');
+  const [newTaskPoints, setNewTaskPoints] = useState(0);
+  const [newTaskSlotId, setNewTaskSlotId] = useState('');
   
   // 获取孩子用户
   const child = users.find(u => u.role === 'child');
@@ -35,14 +44,21 @@ export function HomePage() {
     return getDailyTasksByDate(currentDate);
   }, [currentDate, dailyTasks]);
   
+  // 按状态分组
+  const pendingTasks = todayTasks.filter(t => t.status === 'pending');
+  const completedTasks = todayTasks.filter(t => t.status === 'completed');
+  const submittedTasks = todayTasks.filter(t => t.status === 'submitted');
+  
   // 计算进度
   const progress = useMemo(() => {
     const completed = todayTasks.filter(t => t.status === 'completed').length;
     const pointsEarned = todayTasks
       .filter(t => t.status === 'completed')
       .reduce((sum, t) => sum + t.points, 0);
-    const totalPoints = todayTasks.reduce((sum, t) => sum + t.points, 0);
-    return { completed, total: todayTasks.length, pointsEarned, totalPoints };
+    const pendingPoints = todayTasks
+      .filter(t => t.status === 'pending' || t.status === 'submitted')
+      .reduce((sum, t) => sum + t.points, 0);
+    return { completed, total: todayTasks.length, pointsEarned, totalPoints: pointsEarned + pendingPoints };
   }, [todayTasks]);
   
   // 获取积分
@@ -61,9 +77,10 @@ export function HomePage() {
     setCurrentDate(formatDate(next));
   };
   
-  // 快速添加任务（从预设）
-  const handleQuickAddTask = (preset: typeof presetTemplates[0], slotId: string) => {
-    if (!family || !child) return;
+  // 从模板选择任务
+  const handleSelectTemplate = (templateId: string, slotId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (!template || !family || !child) return;
     
     const slot = timeSlots.find(s => s.id === slotId);
     if (!slot) return;
@@ -72,31 +89,80 @@ export function HomePage() {
       familyId: family.id,
       childId: child.id,
       date: currentDate,
-      name: preset.name,
-      type: preset.type,
-      points: preset.defaultPoints,
+      name: template.name,
+      type: template.type,
+      points: template.points,
       timeSlotId: slotId,
       timeSlotStart: slot.startTime,
       timeSlotEnd: slot.endTime,
       status: 'pending',
     });
+    
+    setShowAddTask(false);
   };
   
-  // 复制昨日任务
-  const handleCopyYesterday = () => {
-    if (!child) return;
-    copyYesterdayTasks(currentDate, child.id);
+  // 自定义添加任务
+  const handleAddCustomTask = () => {
+    if (!family || !child || !newTaskName || !newTaskSlotId) return;
+    
+    const slot = timeSlots.find(s => s.id === newTaskSlotId);
+    if (!slot) return;
+    
+    addDailyTask({
+      familyId: family.id,
+      childId: child.id,
+      date: currentDate,
+      name: newTaskName,
+      type: 'habit',
+      points: newTaskPoints,
+      timeSlotId: newTaskSlotId,
+      timeSlotStart: slot.startTime,
+      timeSlotEnd: slot.endTime,
+      status: 'pending',
+    });
+    
+    setNewTaskName('');
+    setNewTaskPoints(0);
+    setNewTaskSlotId('');
+    setShowAddTask(false);
   };
   
-  // 提交任务
-  const handleSubmitTask = (taskId: string) => {
-    submitTask(taskId);
+  // 标记完成（自己确认）
+  const handleMarkComplete = (taskId: string) => {
+    updateDailyTaskStatus(taskId, 'submitted', {
+      completedAt: new Date().toISOString(),
+    });
   };
   
-  // 确认任务
-  const handleConfirmTask = (taskId: string) => {
-    if (!parent) return;
-    confirmTask(taskId, parent.id);
+  // 标记未完成
+  const handleMarkPending = (taskId: string) => {
+    updateDailyTaskStatus(taskId, 'pending');
+  };
+  
+  // 打开签字确认模态框
+  const handleOpenSignModal = (taskId: string) => {
+    setSelectedTaskId(taskId);
+    setShowSignModal(true);
+  };
+  
+  // 签字确认成功
+  const handleSignSuccess = () => {
+    if (!selectedTaskId || !child) return;
+    
+    const task = todayTasks.find(t => t.id === selectedTaskId);
+    if (!task) return;
+    
+    // 更新任务状态为已完成
+    updateDailyTaskStatus(selectedTaskId, 'completed', {
+      confirmedAt: new Date().toISOString(),
+      confirmedBy: parent?.id || 'parent',
+    });
+    
+    // 积分入账
+    earnPoints(child.id, task.points, selectedTaskId, `完成任务: ${task.name}`);
+    
+    setShowSignModal(false);
+    setSelectedTaskId(null);
   };
 
   // TabBar 配置
@@ -104,7 +170,6 @@ export function HomePage() {
     { key: 'tasks', label: '任务', icon: 'calendar' },
     { key: 'points', label: '积分', icon: 'star' },
     { key: 'rewards', label: '奖励', icon: 'gift' },
-    { key: 'settings', label: '设置', icon: 'settings' },
   ];
 
   return (
@@ -115,15 +180,11 @@ export function HomePage() {
           <div className="flex items-center gap-2">
             <span className="text-2xl">👋</span>
             <div>
-              <div className="font-medium text-gray-800">
-                {currentUser?.role === 'child' ? child?.name : parent?.name}
-              </div>
-              <div className="text-xs text-gray-500">
-                {currentUser?.role === 'child' ? '孩子模式' : '家长模式'}
-              </div>
+              <div className="font-medium text-gray-800">{child?.name}</div>
+              <div className="text-xs text-gray-500">今天要加油哦！</div>
             </div>
           </div>
-          {childPoints && currentUser?.role === 'child' && (
+          {childPoints && (
             <PointsBadge points={childPoints.balance} locked={childPoints.locked} />
           )}
         </div>
@@ -148,60 +209,113 @@ export function HomePage() {
             />
           )}
           
-          {/* 操作按钮 */}
-          {currentUser?.role === 'parent' && (
-            <div className="flex gap-2 mb-4">
-              <Button size="sm" variant="secondary" onClick={handleCopyYesterday}>
-                复制昨日
-              </Button>
-              <Button size="sm" variant="ghost">
-                + 添加任务
-              </Button>
-            </div>
-          )}
+          {/* 添加任务按钮 */}
+          <Button className="w-full mb-4" onClick={() => setShowAddTask(true)}>
+            + 创建今日任务
+          </Button>
           
           {/* 任务列表 */}
-          {timeSlots.length > 0 ? (
-            <TaskList
-              tasks={todayTasks}
-              timeSlots={timeSlots}
-              role={currentUser?.role || 'child'}
-              onSubmit={handleSubmitTask}
-              onConfirm={handleConfirmTask}
-            />
-          ) : (
-            <Card>
-              <div className="text-center text-gray-400 py-8">
-                暂无时间段配置，请先在设置中配置
-              </div>
-            </Card>
-          )}
-          
-          {/* 空状态 */}
-          {todayTasks.length === 0 && currentUser?.role === 'parent' && (
-            <Card>
-              <div className="text-center py-8">
-                <Icon name="calendar" size={40} className="text-gray-300 mb-3" />
-                <p className="text-gray-500 mb-2">今日还没有安排任务</p>
-                <p className="text-gray-400 text-sm mb-4">从预设模板快速添加吧</p>
-                
-                {/* 预设模板快捷添加 */}
-                <div className="grid grid-cols-2 gap-2">
-                  {presetTemplates.slice(0, 6).map(preset => (
-                    <Button 
-                      key={preset.id}
-                      size="sm"
-                      variant="ghost"
-                      className="text-xs"
-                      onClick={() => handleQuickAddTask(preset, timeSlots[0]?.id || '')}
-                    >
-                      {preset.name}
-                    </Button>
+          <div className="space-y-4">
+            {/* 待完成任务 */}
+            {pendingTasks.length > 0 && (
+              <Card>
+                <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <Icon name="clock" size={18} />
+                  待完成 ({pendingTasks.length})
+                </h3>
+                <div className="space-y-2">
+                  {pendingTasks.map(task => (
+                    <div key={task.id} className="task-item pending">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{task.type === 'homework' ? '📝' : task.type === 'practice' ? '🎨' : '✨'}</span>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">{task.name}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge color="primary">+{task.points}分</Badge>
+                            <span className="text-sm text-gray-500">{task.timeSlotStart}-{task.timeSlotEnd}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button size="sm" onClick={() => handleMarkComplete(task.id)}>
+                        ✓ 完成
+                      </Button>
+                    </div>
                   ))}
                 </div>
-              </div>
-            </Card>
-          )}
+              </Card>
+            )}
+            
+            {/* 待签字确认 */}
+            {submittedTasks.length > 0 && (
+              <Card>
+                <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <Icon name="lock" size={18} />
+                  待签字确认 ({submittedTasks.length})
+                </h3>
+                <div className="space-y-2">
+                  {submittedTasks.map(task => (
+                    <div key={task.id} className="task-item bg-yellow-50">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{task.type === 'homework' ? '📝' : task.type === 'practice' ? '🎨' : '✨'}</span>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">{task.name}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge color="primary">+{task.points}分</Badge>
+                            <Badge color="gray">待签字</Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="secondary" onClick={() => handleMarkPending(task.id)}>
+                          未完成
+                        </Button>
+                        <Button size="sm" onClick={() => handleOpenSignModal(task.id)}>
+                          签字
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-gray-500 text-sm mt-3 text-center">
+                  请家长输入签字密码确认后积分入账
+                </p>
+              </Card>
+            )}
+            
+            {/* 已完成任务 */}
+            {completedTasks.length > 0 && (
+              <Card>
+                <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <Icon name="check" size={18} />
+                  已完成 ({completedTasks.length})
+                </h3>
+                <div className="space-y-2">
+                  {completedTasks.map(task => (
+                    <div key={task.id} className="task-item completed">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">✅</span>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">{task.name}</div>
+                          <Badge color="success">+{task.points}分</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+            
+            {/* 空状态 */}
+            {todayTasks.length === 0 && (
+              <Card>
+                <div className="text-center py-8">
+                  <Icon name="calendar" size={40} className="text-gray-300 mb-3" />
+                  <p className="text-gray-500 mb-2">今天还没有任务</p>
+                  <p className="text-gray-400 text-sm">点击上方按钮创建你的任务吧！</p>
+                </div>
+              </Card>
+            )}
+          </div>
         </div>
       )}
 
@@ -219,9 +333,7 @@ export function HomePage() {
                   <div className="text-gray-500 text-sm mt-1">
                     可用积分
                     {childPoints.locked > 0 && (
-                      <span className="text-gray-400 ml-2">
-                        ({childPoints.locked} 已锁定)
-                      </span>
+                      <span className="text-gray-400 ml-2">({childPoints.locked} 已锁定)</span>
                     )}
                   </div>
                   <div className="flex justify-center gap-4 mt-4 text-sm">
@@ -241,20 +353,13 @@ export function HomePage() {
             </div>
           </Card>
           
-          <Card>
-            <h3 className="font-medium text-gray-700 mb-3">积分明细</h3>
-            {childPoints && child ? (
-              <div className="space-y-2 text-sm">
-                {/* 这里可以显示积分记录 */}
-                <div className="text-gray-400 text-center py-4">
-                  完成任务获得积分吧！
-                </div>
-              </div>
-            ) : (
-              <div className="text-gray-400 text-center py-4">
-                暂无记录
-              </div>
-            )}
+          <Card className="bg-yellow-50 border-yellow-200">
+            <h3 className="font-medium text-yellow-700 mb-2">💡 获得积分小贴士</h3>
+            <div className="text-sm text-yellow-600 space-y-1">
+              <p>• 完成任务后点击"完成"按钮</p>
+              <p>• 请家长签字确认后积分入账</p>
+              <p>• 积分可以兑换奖励哦！</p>
+            </div>
           </Card>
         </div>
       )}
@@ -262,95 +367,127 @@ export function HomePage() {
       {/* 奖励内容 */}
       {activeTab === 'rewards' && (
         <div className="max-w-md mx-auto px-4 py-4">
-          <h3 className="font-medium text-gray-700 mb-3">可兑换奖励</h3>
-          
-          <div className="space-y-2">
-            {defaultRewards.map((reward, idx) => (
-              <Card key={idx} padding="sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-800">{reward.name}</div>
-                    {reward.usageRule && (
-                      <div className="text-xs text-gray-400 mt-1">{reward.usageRule}</div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge color="primary">{reward.cost}分</Badge>
-                    {childPoints && childPoints.balance >= reward.cost && (
+          <Card>
+            <h3 className="font-medium text-gray-700 mb-3">可兑换奖励</h3>
+            
+            {rewardTemplates.length > 0 ? (
+              <div className="space-y-2">
+                {rewardTemplates.filter(r => r.points > 0).map(template => (
+                  <div key={template.id} className="border rounded-lg p-3 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{template.name}</div>
+                      <Badge color="primary">{template.points}分</Badge>
+                    </div>
+                    {childPoints && childPoints.balance >= template.points && (
                       <Button size="sm">兑换</Button>
                     )}
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-          
-          {currentUser?.role === 'parent' && (
-            <Button className="w-full mt-4" variant="ghost">
-              + 添加奖励
-            </Button>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Icon name="gift" size={40} className="text-gray-300 mb-3" />
+                <p className="text-gray-500">家长还没有设置奖励模板</p>
+              </div>
+            )}
+          </Card>
         </div>
       )}
 
-      {/* 设置内容 */}
-      {activeTab === 'settings' && (
-        <div className="max-w-md mx-auto px-4 py-4">
-          <Card className="mb-4">
-            <h3 className="font-medium text-gray-700 mb-3">家庭信息</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-500">家庭名称</span>
-                <span className="font-medium">{family?.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">家长</span>
-                <span className="font-medium">{parent?.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">孩子</span>
-                <span className="font-medium">{child?.name}</span>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="mb-4">
-            <h3 className="font-medium text-gray-700 mb-3">时间段设置</h3>
+      {/* 添加任务模态框 */}
+      <Modal 
+        isOpen={showAddTask}
+        onClose={() => setShowAddTask(false)}
+        title="创建任务"
+      >
+        {/* 选择时间段 */}
+        <div className="mb-4">
+          <label className="text-gray-500 text-sm block mb-2">时间段</label>
+          <div className="flex gap-2">
             {timeSlots.map(slot => (
-              <div key={slot.id} className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">
-                    {slot.startTime.startsWith('06') || slot.startTime.startsWith('07') ? '☀️' :
-                     slot.startTime.startsWith('12') ? '🌤️' : '🌙'}
-                  </span>
-                  <span>{slot.name}</span>
-                </div>
-                <span className="text-gray-400 text-sm">
-                  {slot.startTime} - {slot.endTime}
-                </span>
-              </div>
+              <button
+                key={slot.id}
+                onClick={() => setNewTaskSlotId(slot.id)}
+                className={`px-4 py-2 rounded-lg ${
+                  newTaskSlotId === slot.id 
+                    ? 'bg-primary-400 text-white' 
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {slot.name}
+              </button>
             ))}
-          </Card>
-          
-          <Card>
-            <h3 className="font-medium text-gray-700 mb-3">积分配置</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">积分上限</span>
-                <span className="font-medium">300 分</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">确认超时</span>
-                <span className="font-medium">2 小时</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">兑换超时</span>
-                <span className="font-medium">24 小时</span>
-              </div>
-            </div>
-          </Card>
+          </div>
         </div>
-      )}
+        
+        {/* 从模板选择 */}
+        {newTaskSlotId && templates.length > 0 && (
+          <div className="mb-4">
+            <label className="text-gray-500 text-sm block mb-2">从模板选择</label>
+            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+              {templates.map(template => (
+                <button
+                  key={template.id}
+                  onClick={() => handleSelectTemplate(template.id, newTaskSlotId)}
+                  className="border rounded-lg p-2 text-left hover:bg-gray-50"
+                >
+                  <div className="font-medium">{template.name}</div>
+                  <Badge color="primary" size="sm">+{template.points}分</Badge>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* 自定义任务 */}
+        {newTaskSlotId && (
+          <div className="border-t pt-4">
+            <label className="text-gray-500 text-sm block mb-2">自定义任务</label>
+            <input
+              type="text"
+              value={newTaskName}
+              onChange={(e) => setNewTaskName(e.target.value)}
+              placeholder="任务名称"
+              className="w-full px-3 py-2 border rounded-lg mb-2"
+            />
+            <div className="flex items-center gap-2">
+              <label className="text-gray-500 text-sm">分值</label>
+              <input
+                type="number"
+                value={newTaskPoints}
+                onChange={(e) => setNewTaskPoints(parseInt(e.target.value) || 0)}
+                className="px-3 py-2 border rounded-lg w-20"
+              />
+              <span className="text-gray-500">分</span>
+            </div>
+            <Button 
+              className="w-full mt-3" 
+              onClick={handleAddCustomTask}
+              disabled={!newTaskName || newTaskPoints <= 0}
+            >
+              添加自定义任务
+            </Button>
+          </div>
+        )}
+      </Modal>
+
+      {/* 签字确认模态框 */}
+      <Modal
+        isOpen={showSignModal}
+        onClose={() => {
+          setShowSignModal(false);
+          setSelectedTaskId(null);
+        }}
+        title="家长签字确认"
+      >
+        <SignPasswordInput 
+          onConfirm={handleSignSuccess}
+          onCancel={() => {
+            setShowSignModal(false);
+            setSelectedTaskId(null);
+          }}
+        />
+      </Modal>
 
       {/* 底部 TabBar */}
       <TabBar 

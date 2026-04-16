@@ -1,15 +1,17 @@
 /**
- * 家长端设置页面
+ * 家长端设置页面 - 增强版
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Page, Card, Button, Badge, Tabs, Icon } from '@/components';
-import { useFamilyStore, useTaskStore, useRewardStore, usePointsStore } from '@/store';
-import { defaultSystemConfig, defaultRewards } from '@/utils/presets';
-import type { TimeSlot, Reward, SystemConfig } from '@/types';
+import { useFamilyStore, useTaskStore, useRewardStore, usePasswordStore, useTemplateStore } from '@/store';
+import { defaultSystemConfig } from '@/utils/presets';
+import type { TimeSlot, SystemConfig } from '@/types';
+import type { TaskTemplateItem, RewardTemplateItem } from '@/store/template';
 
 export function ParentPage() {
-  const [activeTab, setActiveTab] = useState('family');
+  const [activeTab, setActiveTab] = useState('sign');
+  const [showSignPassword, setShowSignPassword] = useState(false);
   
   // Store
   const family = useFamilyStore(state => state.family);
@@ -20,8 +22,20 @@ export function ParentPage() {
   const deleteTimeSlot = useTaskStore(state => state.deleteTimeSlot);
   const rewards = useRewardStore(state => state.rewards);
   const addReward = useRewardStore(state => state.addReward);
-  const updateReward = useRewardStore(state => state.updateReward);
   const deleteReward = useRewardStore(state => state.deleteReward);
+  const getSignPassword = usePasswordStore(state => state.getSignPassword);
+  const generateSignPassword = usePasswordStore(state => state.generateSignPassword);
+  const logout = usePasswordStore(state => state.logout);
+  
+  const taskTemplates = useTemplateStore(state => state.taskTemplates);
+  const addTaskTemplate = useTemplateStore(state => state.addTaskTemplate);
+  const updateTaskTemplate = useTemplateStore(state => state.updateTaskTemplate);
+  const deleteTaskTemplate = useTemplateStore(state => state.deleteTaskTemplate);
+  const rewardTemplates = useTemplateStore(state => state.rewardTemplates);
+  const addRewardTemplate = useTemplateStore(state => state.addRewardTemplate);
+  const updateRewardTemplate = useTemplateStore(state => state.updateRewardTemplate);
+  const deleteRewardTemplate = useTemplateStore(state => state.deleteRewardTemplate);
+  const initDefaultTemplates = useTemplateStore(state => state.initDefaultTemplates);
   
   // 家庭信息编辑
   const [editingFamily, setEditingFamily] = useState(false);
@@ -37,15 +51,31 @@ export function ParentPage() {
   // 积分配置
   const [pointsConfig, setPointsConfig] = useState<SystemConfig>(defaultSystemConfig);
   
+  // 任务模板编辑
+  const [showAddTaskTemplate, setShowAddTaskTemplate] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplatePoints, setNewTemplatePoints] = useState('');
+  const [newTemplateType, setNewTemplateType] = useState<'homework' | 'practice' | 'habit'>('habit');
+  
+  // 奖惩模板编辑
+  const [showAddRewardTemplate, setShowAddRewardTemplate] = useState(false);
+  const [newRewardTemplateName, setNewRewardTemplateName] = useState('');
+  const [newRewardTemplatePoints, setNewRewardTemplatePoints] = useState('');
+  
   // 奖励编辑
   const [showAddReward, setShowAddReward] = useState(false);
   const [newRewardName, setNewRewardName] = useState('');
   const [newRewardCost, setNewRewardCost] = useState('');
-  const [newRewardStock, setNewRewardStock] = useState('');
-  const [newRewardRule, setNewRewardRule] = useState('');
 
   const parent = users.find(u => u.role === 'parent');
   const child = users.find(u => u.role === 'child');
+
+  // 获取今日签字密码
+  const signPassword = getSignPassword();
+
+  useEffect(() => {
+    generateSignPassword();
+  }, []);
 
   // 添加时间段
   const handleAddSlot = () => {
@@ -75,9 +105,6 @@ export function ParentPage() {
       });
     }
     setEditingSlot(null);
-    setNewSlotName('');
-    setNewSlotStart('');
-    setNewSlotEnd('');
   };
 
   // 开始编辑时间段
@@ -88,6 +115,45 @@ export function ParentPage() {
     setNewSlotEnd(slot.endTime);
   };
 
+  // 添加任务模板
+  const handleAddTaskTemplate = () => {
+    if (!family || !newTemplateName || !newTemplatePoints) return;
+    
+    addTaskTemplate({
+      familyId: family.id,
+      name: newTemplateName,
+      type: newTemplateType,
+      points: parseInt(newTemplatePoints),
+      isCustom: true,
+    });
+    
+    setNewTemplateName('');
+    setNewTemplatePoints('');
+    setShowAddTaskTemplate(false);
+  };
+
+  // 添加奖惩模板
+  const handleAddRewardTemplate = () => {
+    if (!family || !newRewardTemplateName || !newRewardTemplatePoints) return;
+    
+    addRewardTemplate({
+      familyId: family.id,
+      name: newRewardTemplateName,
+      points: parseInt(newRewardTemplatePoints),
+      isCustom: true,
+    });
+    
+    setNewRewardTemplateName('');
+    setNewRewardTemplatePoints('');
+    setShowAddRewardTemplate(false);
+  };
+
+  // 初始化默认模板
+  const handleInitDefaultTemplates = () => {
+    if (!family) return;
+    initDefaultTemplates(family.id);
+  };
+
   // 添加奖励
   const handleAddReward = () => {
     if (!family || !newRewardName || !newRewardCost) return;
@@ -96,38 +162,26 @@ export function ParentPage() {
       familyId: family.id,
       name: newRewardName,
       cost: parseInt(newRewardCost),
-      stock: newRewardStock ? parseInt(newRewardStock) : undefined,
-      usageRule: newRewardRule || undefined,
       isActive: true,
     });
     
     setNewRewardName('');
     setNewRewardCost('');
-    setNewRewardStock('');
-    setNewRewardRule('');
     setShowAddReward(false);
   };
 
-  // 初始化默认奖励
-  const handleInitDefaultRewards = () => {
-    if (!family) return;
-    defaultRewards.forEach(reward => {
-      addReward({
-        familyId: family.id,
-        name: reward.name,
-        cost: reward.cost,
-        stock: reward.stock,
-        usageRule: reward.usageRule,
-        isActive: true,
-      });
-    });
+  // 退出登录
+  const handleLogout = () => {
+    logout();
+    window.location.reload();
   };
 
   const tabs = [
-    { key: 'family', label: '家庭信息' },
+    { key: 'sign', label: '签字密码' },
+    { key: 'templates', label: '任务模板' },
+    { key: 'rewards', label: '奖惩模板' },
     { key: 'slots', label: '时间段' },
-    { key: 'points', label: '积分配置' },
-    { key: 'rewards', label: '奖励管理' },
+    { key: 'config', label: '配置' },
   ];
 
   return (
@@ -139,95 +193,226 @@ export function ParentPage() {
             <span className="text-2xl">👨‍👩‍👧</span>
             <div>
               <div className="font-medium text-white">家长端</div>
-              <div className="text-xs text-blue-100">设置管理中心</div>
+              <div className="text-xs text-blue-100">{family?.name}</div>
             </div>
           </div>
-          <div className="text-xs text-blue-100">
-            孩子端: 192.168.31.115:3333
-          </div>
+          <Button size="sm" variant="ghost" onClick={handleLogout} className="text-white">
+            退出
+          </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white sticky top-[52px] z-9">
-        <div className="max-w-md mx-auto">
+      <div className="bg-white sticky top-[52px] z-9 border-b">
+        <div className="max-w-md mx-auto overflow-x-auto">
           <Tabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} />
         </div>
       </div>
 
       {/* 内容区域 */}
       <div className="max-w-md mx-auto px-4 py-4">
-        {/* 家庭信息 */}
-        {activeTab === 'family' && (
+        {/* 签字密码 */}
+        {activeTab === 'sign' && (
+          <div className="space-y-4">
+            <Card>
+              <h3 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
+                <Icon name="lock" size={20} />
+                今日签字密码
+              </h3>
+              
+              <div className="flex items-center justify-center gap-4 py-4">
+                <div className="text-3xl font-mono px-6 py-3 bg-gray-100 rounded-lg">
+                  {showSignPassword ? signPassword : '****'}
+                </div>
+                <button
+                  onClick={() => setShowSignPassword(!showSignPassword)}
+                  className="p-3 text-gray-500 hover:text-gray-700 bg-gray-100 rounded-lg"
+                >
+                  {showSignPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
+              
+              <p className="text-gray-500 text-sm text-center mb-4">
+                此密码用于确认孩子任务完成，每日随机生成
+              </p>
+            </Card>
+
+            <Card className="bg-blue-50 border-blue-200">
+              <h3 className="font-medium text-blue-700 mb-2">💡 签字密码说明</h3>
+              <div className="text-sm text-blue-600 space-y-1">
+                <p>• 签字密码每天自动生成，4位随机字符</p>
+                <p>• 孩子完成任务后需要家长签字确认</p>
+                <p>• 输入正确签字密码后积分才能入账</p>
+                <p>• 点击眼睛按钮可以显示/隐藏密码</p>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* 任务模板 */}
+        {activeTab === 'templates' && (
           <div className="space-y-4">
             <Card>
               <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                <Icon name="home" size={20} />
-                家庭信息
+                <Icon name="calendar" size={20} />
+                任务模板
               </h3>
               
-              {editingFamily ? (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-gray-500 text-sm">家庭名称</label>
-                    <input
-                      type="text"
-                      value={familyName}
-                      onChange={(e) => setFamilyName(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg mt-1"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => setEditingFamily(false)}>
-                      保存
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={() => setEditingFamily(false)}>
-                      取消
-                    </Button>
-                  </div>
+              {taskTemplates.length > 0 ? (
+                <div className="space-y-2">
+                  {taskTemplates.map(template => (
+                    <div key={template.id} className="border rounded-lg p-3 flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">{template.name}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge color={template.type === 'homework' ? 'blue' : template.type === 'practice' ? 'purple' : 'success'}>
+                            {template.type === 'homework' ? '作业' : template.type === 'practice' ? '练习' : '习惯'}
+                          </Badge>
+                          <Badge color="primary">+{template.points}分</Badge>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="danger" onClick={() => deleteTaskTemplate(template.id)}>
+                        删除
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">家庭名称</span>
-                    <span className="font-medium">{family?.name}</span>
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={() => setEditingFamily(true)}>
-                    编辑
+                <div className="text-center py-8">
+                  <Icon name="calendar" size={40} className="text-gray-300 mb-3" />
+                  <p className="text-gray-500 mb-4">暂无任务模板</p>
+                  <Button onClick={handleInitDefaultTemplates}>
+                    导入默认模板
                   </Button>
                 </div>
               )}
             </Card>
 
+            {/* 添加任务模板 */}
+            {showAddTaskTemplate ? (
+              <Card>
+                <h3 className="font-medium text-gray-700 mb-3">添加任务模板</h3>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={newTemplateName}
+                    onChange={(e) => setNewTemplateName(e.target.value)}
+                    placeholder="任务名称"
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <label className="text-gray-500 text-sm">分值</label>
+                      <input
+                        type="number"
+                        value={newTemplatePoints}
+                        onChange={(e) => setNewTemplatePoints(e.target.value)}
+                        placeholder="5"
+                        className="w-full px-3 py-2 border rounded-lg mt-1"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-gray-500 text-sm">类型</label>
+                      <select
+                        value={newTemplateType}
+                        onChange={(e) => setNewTemplateType(e.target.value as 'homework' | 'practice' | 'habit')}
+                        className="w-full px-3 py-2 border rounded-lg mt-1"
+                      >
+                        <option value="homework">作业</option>
+                        <option value="practice">练习</option>
+                        <option value="habit">习惯</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleAddTaskTemplate}>添加</Button>
+                    <Button variant="secondary" onClick={() => setShowAddTaskTemplate(false)}>
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <Button className="w-full" onClick={() => setShowAddTaskTemplate(true)}>
+                + 添加任务模板
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* 奖惩模板 */}
+        {activeTab === 'rewards' && (
+          <div className="space-y-4">
             <Card>
               <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                <Icon name="team" size={20} />
-                成员信息
+                <Icon name="star" size={20} />
+                奖惩模板
               </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge color="blue">家长</Badge>
-                    <span>{parent?.name}</span>
-                  </div>
+              
+              {rewardTemplates.length > 0 ? (
+                <div className="space-y-2">
+                  {rewardTemplates.map(template => (
+                    <div key={template.id} className="border rounded-lg p-3 flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">{template.name}</div>
+                        <Badge color={template.points > 0 ? 'success' : 'danger'}>
+                          {template.points > 0 ? `+${template.points}` : template.points}分
+                        </Badge>
+                      </div>
+                      <Button size="sm" variant="danger" onClick={() => deleteRewardTemplate(template.id)}>
+                        删除
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge color="purple">孩子</Badge>
-                    <span>{child?.name}</span>
-                  </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Icon name="star" size={40} className="text-gray-300 mb-3" />
+                  <p className="text-gray-500 mb-4">暂无奖惩模板</p>
+                  <Button onClick={handleInitDefaultTemplates}>
+                    导入默认模板
+                  </Button>
                 </div>
-              </div>
+              )}
             </Card>
 
-            <Card className="bg-blue-50 border-blue-200">
-              <h3 className="font-medium text-blue-700 mb-2">💡 使用提示</h3>
-              <div className="text-sm text-blue-600 space-y-1">
-                <p>• 孩子端访问地址: http://192.168.31.115:3333</p>
-                <p>• 孩子可以查看任务、申请完成、兑换奖励</p>
-                <p>• 家长在此设置任务模板、时间段、奖励</p>
-              </div>
-            </Card>
+            {/* 添加奖惩模板 */}
+            {showAddRewardTemplate ? (
+              <Card>
+                <h3 className="font-medium text-gray-700 mb-3">添加奖惩模板</h3>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={newRewardTemplateName}
+                    onChange={(e) => setNewRewardTemplateName(e.target.value)}
+                    placeholder="奖惩名称（如：考试进步）"
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <label className="text-gray-500 text-sm">分值（正数奖励，负数惩罚）</label>
+                      <input
+                        type="number"
+                        value={newRewardTemplatePoints}
+                        onChange={(e) => setNewRewardTemplatePoints(e.target.value)}
+                        placeholder="10 或 -5"
+                        className="w-full px-3 py-2 border rounded-lg mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleAddRewardTemplate}>添加</Button>
+                    <Button variant="secondary" onClick={() => setShowAddRewardTemplate(false)}>
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <Button className="w-full" onClick={() => setShowAddRewardTemplate(true)}>
+                + 添加奖惩模板
+              </Button>
+            )}
           </div>
         )}
 
@@ -236,7 +421,7 @@ export function ParentPage() {
           <div className="space-y-4">
             <Card>
               <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                <Icon name="calendar" size={20} />
+                <Icon name="clock" size={20} />
                 时间段配置
               </h3>
               
@@ -249,7 +434,6 @@ export function ParentPage() {
                           type="text"
                           value={newSlotName}
                           onChange={(e) => setNewSlotName(e.target.value)}
-                          placeholder="时间段名称"
                           className="w-full px-2 py-1 border rounded"
                         />
                         <div className="flex gap-2">
@@ -267,12 +451,8 @@ export function ParentPage() {
                           />
                         </div>
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleSaveSlot(slot.id)}>
-                            保存
-                          </Button>
-                          <Button size="sm" variant="secondary" onClick={() => setEditingSlot(null)}>
-                            取消
-                          </Button>
+                          <Button size="sm" onClick={() => handleSaveSlot(slot.id)}>保存</Button>
+                          <Button size="sm" variant="secondary" onClick={() => setEditingSlot(null)}>取消</Button>
                         </div>
                       </div>
                     ) : (
@@ -284,18 +464,12 @@ export function ParentPage() {
                           </span>
                           <div>
                             <div className="font-medium">{slot.name}</div>
-                            <div className="text-sm text-gray-500">
-                              {slot.startTime} - {slot.endTime}
-                            </div>
+                            <div className="text-sm text-gray-500">{slot.startTime} - {slot.endTime}</div>
                           </div>
                         </div>
                         <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => startEditSlot(slot)}>
-                            编辑
-                          </Button>
-                          <Button size="sm" variant="danger" onClick={() => deleteTimeSlot(slot.id)}>
-                            删除
-                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => startEditSlot(slot)}>编辑</Button>
+                          <Button size="sm" variant="danger" onClick={() => deleteTimeSlot(slot.id)}>删除</Button>
                         </div>
                       </div>
                     )}
@@ -313,12 +487,12 @@ export function ParentPage() {
                     type="text"
                     value={newSlotName}
                     onChange={(e) => setNewSlotName(e.target.value)}
-                    placeholder="时间段名称（如：放学后）"
+                    placeholder="时间段名称"
                     className="w-full px-3 py-2 border rounded-lg"
                   />
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <label className="text-gray-500 text-sm">开始时间</label>
+                      <label className="text-gray-500 text-sm">开始</label>
                       <input
                         type="time"
                         value={newSlotStart}
@@ -327,7 +501,7 @@ export function ParentPage() {
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="text-gray-500 text-sm">结束时间</label>
+                      <label className="text-gray-500 text-sm">结束</label>
                       <input
                         type="time"
                         value={newSlotEnd}
@@ -338,32 +512,28 @@ export function ParentPage() {
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={handleAddSlot}>添加</Button>
-                    <Button variant="secondary" onClick={() => setShowAddSlot(false)}>
-                      取消
-                    </Button>
+                    <Button variant="secondary" onClick={() => setShowAddSlot(false)}>取消</Button>
                   </div>
                 </div>
               </Card>
             ) : (
-              <Button className="w-full" onClick={() => setShowAddSlot(true)}>
-                + 添加时间段
-              </Button>
+              <Button className="w-full" onClick={() => setShowAddSlot(true)}>+ 添加时间段</Button>
             )}
           </div>
         )}
 
-        {/* 积分配置 */}
-        {activeTab === 'points' && (
+        {/* 配置 */}
+        {activeTab === 'config' && (
           <div className="space-y-4">
             <Card>
               <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                <Icon name="star" size={20} />
+                <Icon name="settings" size={20} />
                 积分配置
               </h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="text-gray-500 text-sm">积分上限（防止积分过多）</label>
+                  <label className="text-gray-500 text-sm">积分上限</label>
                   <div className="flex items-center gap-2 mt-1">
                     <input
                       type="number"
@@ -373,11 +543,10 @@ export function ParentPage() {
                     />
                     <span className="text-gray-500">分</span>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">达到上限后需要兑换奖励才能继续获得积分</p>
                 </div>
 
                 <div>
-                  <label className="text-gray-500 text-sm">任务确认超时时间</label>
+                  <label className="text-gray-500 text-sm">确认超时</label>
                   <div className="flex items-center gap-2 mt-1">
                     <input
                       type="number"
@@ -387,172 +556,36 @@ export function ParentPage() {
                     />
                     <span className="text-gray-500">小时</span>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">超时后自动确认，积分入账</p>
-                </div>
-
-                <div>
-                  <label className="text-gray-500 text-sm">兑换确认超时时间</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <input
-                      type="number"
-                      value={pointsConfig.redemptionTimeout}
-                      onChange={(e) => setPointsConfig(prev => ({ ...prev, redemptionTimeout: parseInt(e.target.value) || 24 }))}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    />
-                    <span className="text-gray-500">小时</span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">兑换申请超时后自动通过</p>
                 </div>
               </div>
+              
+              <Button className="w-full mt-4" onClick={() => alert('配置已保存')}>
+                保存配置
+              </Button>
             </Card>
 
-            <Card className="bg-yellow-50 border-yellow-200">
-              <h3 className="font-medium text-yellow-700 mb-2">💡 积分规则说明</h3>
-              <div className="text-sm text-yellow-600 space-y-1">
-                <p>• 完成任务获得积分，家长确认后入账</p>
-                <p>• 积分上限防止孩子囤积过多积分</p>
-                <p>• 兑换时积分先锁定，家长确认后扣除</p>
-                <p>• 超时自动确认机制保持激励时效性</p>
-              </div>
-            </Card>
-
-            <Button className="w-full" onClick={() => {
-              // TODO: 保存配置到 store
-              alert('配置已保存');
-            }}>
-              保存积分配置
-            </Button>
-          </div>
-        )}
-
-        {/* 奖励管理 */}
-        {activeTab === 'rewards' && (
-          <div className="space-y-4">
             <Card>
               <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                <Icon name="gift" size={20} />
-                奖励列表
+                <Icon name="team" size={20} />
+                家庭信息
               </h3>
-              
-              {rewards.length > 0 ? (
-                <div className="space-y-2">
-                  {rewards.map(reward => (
-                    <div key={reward.id} className="border rounded-lg p-3 flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">{reward.name}</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge color="primary">{reward.cost}分</Badge>
-                          {reward.stock && (
-                            <Badge color="gray">库存: {reward.stock}</Badge>
-                          )}
-                          {reward.usageRule && (
-                            <span className="text-xs text-gray-400">{reward.usageRule}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          onClick={() => updateReward(reward.id, { isActive: !reward.isActive })}
-                        >
-                          {reward.isActive ? '启用' : '禁用'}
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="danger"
-                          onClick={() => deleteReward(reward.id)}
-                        >
-                          删除
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">家庭名称</span>
+                  <span className="font-medium">{family?.name}</span>
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Icon name="gift" size={40} className="text-gray-300 mb-3" />
-                  <p className="text-gray-500 mb-4">暂无奖励</p>
-                  <Button onClick={handleInitDefaultRewards}>
-                    导入默认奖励模板
-                  </Button>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">家长</span>
+                  <span className="font-medium">{parent?.name}</span>
                 </div>
-              )}
+                <div className="flex justify-between">
+                  <span className="text-gray-500">孩子</span>
+                  <span className="font-medium">{child?.name}</span>
+                </div>
+              </div>
             </Card>
-
-            {/* 添加奖励 */}
-            {showAddReward ? (
-              <Card>
-                <h3 className="font-medium text-gray-700 mb-3">添加奖励</h3>
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={newRewardName}
-                    onChange={(e) => setNewRewardName(e.target.value)}
-                    placeholder="奖励名称（如：看动画片30分钟）"
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <label className="text-gray-500 text-sm">所需积分</label>
-                      <input
-                        type="number"
-                        value={newRewardCost}
-                        onChange={(e) => setNewRewardCost(e.target.value)}
-                        placeholder="20"
-                        className="w-full px-3 py-2 border rounded-lg mt-1"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-gray-500 text-sm">库存（可选）</label>
-                      <input
-                        type="number"
-                        value={newRewardStock}
-                        onChange={(e) => setNewRewardStock(e.target.value)}
-                        placeholder="无限"
-                        className="w-full px-3 py-2 border rounded-lg mt-1"
-                      />
-                    </div>
-                  </div>
-                  <input
-                    type="text"
-                    value={newRewardRule}
-                    onChange={(e) => setNewRewardRule(e.target.value)}
-                    placeholder="使用规则（如：周末可用）"
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
-                  <div className="flex gap-2">
-                    <Button onClick={handleAddReward}>添加</Button>
-                    <Button variant="secondary" onClick={() => setShowAddReward(false)}>
-                      取消
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ) : (
-              <Button className="w-full" onClick={() => setShowAddReward(true)}>
-                + 添加奖励
-              </Button>
-            )}
           </div>
         )}
-      </div>
-
-      {/* 底部导航 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100">
-        <div className="max-w-md mx-auto flex justify-around py-2">
-          <a 
-            href="http://192.168.31.115:3333"
-            className="flex flex-col items-center text-primary-500"
-          >
-            <Icon name="home" size={24} />
-            <span className="text-xs mt-1">孩子端</span>
-          </a>
-          <div className="flex flex-col items-center text-blue-500">
-            <Icon name="settings" size={24} />
-            <span className="text-xs mt-1">设置</span>
-          </div>
-        </div>
       </div>
     </Page>
   );
