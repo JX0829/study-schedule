@@ -48,6 +48,15 @@ export function HomePage() {
     if (!family?.id) return allTemplates;
     return allTemplates.filter(t => t.familyId === family.id);
   }, [allTemplates, family?.id]);
+  
+  // 按当前家庭过滤奖惩模板
+  const filteredRewardTemplates = useMemo(() => {
+    if (!family?.id) return rewardTemplates;
+    return rewardTemplates.filter(t => t.familyId === family.id);
+  }, [rewardTemplates, family?.id]);
+  
+  const rewardOptions = filteredRewardTemplates.filter(t => t.points > 0);
+  const penaltyOptions = filteredRewardTemplates.filter(t => t.points < 0);
   const dailyTasks = useTaskStore(state => state.dailyTasks);
   const getDailyTasksByDate = useTaskStore(state => state.getDailyTasksByDate);
   const addDailyTask = useTaskStore(state => state.addDailyTask);
@@ -61,6 +70,10 @@ export function HomePage() {
   
   // 任务类型过滤
   const [filterType, setFilterType] = useState<'all' | 'homework' | 'practice' | 'habit'>('all');
+  
+  // 选中的奖惩任务
+  const [selectedRewards, setSelectedRewards] = useState<string[]>([]);
+  const [selectedPenalties, setSelectedPenalties] = useState<string[]>([]);
   
   // 获取孩子用户
   const child = users.find(u => u.role === 'child');
@@ -140,6 +153,9 @@ export function HomePage() {
       setCustomStartTime(now);
       setCustomEndTime(getEndTimeString(now));
     }
+    // 重置奖惩选择
+    setSelectedRewards([]);
+    setSelectedPenalties([]);
     setShowAddTask(true);
   };
   
@@ -499,6 +515,129 @@ export function HomePage() {
             <Icon name="calendar" size={40} className="text-gray-300 mb-3" />
             <p className="text-gray-500">家长还没有设置任务模板</p>
             <p className="text-gray-400 text-sm mt-1">请让家长先在家长端添加任务模板</p>
+          </div>
+        )}
+
+        {/* 奖励任务选择 */}
+        {rewardOptions.length > 0 && (
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-gray-500 text-sm block">奖励任务（最多选3个）</label>
+              <span className="text-xs text-gray-400">{selectedRewards.length}/3</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+              {rewardOptions.slice(0, 6).map(template => (
+                <button
+                  key={template.id}
+                  onClick={() => {
+                    if (selectedRewards.includes(template.id)) {
+                      setSelectedRewards(selectedRewards.filter(id => id !== template.id));
+                    } else if (selectedRewards.length < 3) {
+                      setSelectedRewards([...selectedRewards, template.id]);
+                    }
+                  }}
+                  disabled={!selectedRewards.includes(template.id) && selectedRewards.length >= 3}
+                  className={`border rounded-lg p-2 text-left transition-colors ${
+                    selectedRewards.includes(template.id)
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } disabled:opacity-50`}
+                >
+                  <div className="font-medium text-gray-800 text-sm">{template.name}</div>
+                  <div className="text-green-600 font-bold text-sm">+{template.points}分</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 惩罚任务选择 */}
+        {penaltyOptions.length > 0 && (
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-gray-500 text-sm block">惩罚任务（最多选3个）</label>
+              <span className="text-xs text-gray-400">{selectedPenalties.length}/3</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+              {penaltyOptions.slice(0, 6).map(template => (
+                <button
+                  key={template.id}
+                  onClick={() => {
+                    if (selectedPenalties.includes(template.id)) {
+                      setSelectedPenalties(selectedPenalties.filter(id => id !== template.id));
+                    } else if (selectedPenalties.length < 3) {
+                      setSelectedPenalties([...selectedPenalties, template.id]);
+                    }
+                  }}
+                  disabled={!selectedPenalties.includes(template.id) && selectedPenalties.length >= 3}
+                  className={`border rounded-lg p-2 text-left transition-colors ${
+                    selectedPenalties.includes(template.id)
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } disabled:opacity-50`}
+                >
+                  <div className="font-medium text-gray-800 text-sm">{template.name}</div>
+                  <div className="text-red-600 font-bold text-sm">{template.points}分</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 确认添加任务按钮 */}
+        {(selectedRewards.length > 0 || selectedPenalties.length > 0) && (
+          <div className="mt-4 pt-4 border-t">
+            <Button 
+              className="w-full"
+              onClick={() => {
+                // 添加选中的奖励任务
+                selectedRewards.forEach(rewardId => {
+                  const template = rewardOptions.find(r => r.id === rewardId);
+                  if (template && family && child) {
+                    addDailyTask({
+                      familyId: family.id,
+                      childId: child.id,
+                      date: currentDate,
+                      name: template.name,
+                      type: 'habit',
+                      points: template.points,
+                      timeSlotId: '',
+                      timeSlotStart: customStartTime,
+                      timeSlotEnd: customEndTime,
+                      status: 'completed', // 奖励任务直接完成
+                    });
+                    // 奖励积分立即入账
+                    earnPoints(child.id, template.points, '', `奖励: ${template.name}`);
+                  }
+                });
+                // 添加选中的惩罚任务
+                selectedPenalties.forEach(penaltyId => {
+                  const template = penaltyOptions.find(p => p.id === penaltyId);
+                  if (template && family && child) {
+                    addDailyTask({
+                      familyId: family.id,
+                      childId: child.id,
+                      date: currentDate,
+                      name: template.name,
+                      type: 'habit',
+                      points: template.points,
+                      timeSlotId: '',
+                      timeSlotStart: customStartTime,
+                      timeSlotEnd: customEndTime,
+                      status: 'completed', // 惩罚任务直接完成，积分已扣除
+                    });
+                    // 惩罚积分立即扣除
+                    earnPoints(child.id, template.points, '', `惩罚: ${template.name}`);
+                  }
+                });
+                // 重置选择并关闭模态框
+                setSelectedRewards([]);
+                setSelectedPenalties([]);
+                setShowAddTask(false);
+              }}
+            >
+              确认添加奖惩任务
+            </Button>
           </div>
         )}
       </Modal>

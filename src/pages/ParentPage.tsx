@@ -74,6 +74,12 @@ export function ParentPage() {
   const [newRewardName, setNewRewardName] = useState('');
   const [newRewardCost, setNewRewardCost] = useState('');
 
+  // 额外奖惩发放
+  const [showBonusModal, setShowBonusModal] = useState(false);
+  const [bonusType, setBonusType] = useState<'reward' | 'penalty'>('reward');
+  const [bonusTemplateId, setBonusTemplateId] = useState('');
+  const [bonusDescription, setBonusDescription] = useState('');
+
   const parent = users.find(u => u.role === 'parent');
   const child = users.find(u => u.role === 'child');
 
@@ -240,6 +246,22 @@ export function ParentPage() {
     setShowAddReward(false);
   };
 
+  // 发放额外奖惩
+  const handleGiveBonus = () => {
+    if (!child || !bonusTemplateId) return;
+    
+    const template = rewardTemplates.find(t => t.id === bonusTemplateId);
+    if (!template) return;
+    
+    // 积分入账（正数为奖励，负数为惩罚）
+    earnPoints(child.id, template.points, '', bonusDescription || template.name);
+    
+    setShowBonusModal(false);
+    setBonusTemplateId('');
+    setBonusDescription('');
+    setBonusType('reward');
+  };
+
   // 退出登录
   const handleLogout = () => {
     logout();
@@ -316,6 +338,15 @@ export function ParentPage() {
                 totalPoints={progress.totalPoints}
               />
             )}
+
+            {/* 发放额外奖惩按钮 */}
+            <Button 
+              className="w-full" 
+              variant="secondary"
+              onClick={() => setShowBonusModal(true)}
+            >
+              🎁 发放额外奖惩
+            </Button>
 
             {/* 待完成任务 */}
             {pendingTasks.length > 0 && (
@@ -415,6 +446,97 @@ export function ParentPage() {
                   <p className="text-gray-400 text-sm mt-1">等孩子添加任务后会显示在这里</p>
                 </div>
               </Card>
+            )}
+
+            {/* 发放额外奖惩模态框 */}
+            {showBonusModal && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-sm w-full p-4 max-h-[80vh] overflow-y-auto">
+                  <h3 className="font-medium text-gray-700 mb-4 text-lg">🎁 发放额外奖惩</h3>
+                  
+                  {/* 类型选择 */}
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={() => setBonusType('reward')}
+                      className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
+                        bonusType === 'reward' 
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      奖励 +
+                    </button>
+                    <button
+                      onClick={() => setBonusType('penalty')}
+                      className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
+                        bonusType === 'penalty' 
+                          ? 'bg-red-500 text-white' 
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      惩罚 -
+                    </button>
+                  </div>
+                  
+                  {/* 奖惩模板列表 */}
+                  <div className="space-y-2 mb-4">
+                    {(bonusType === 'reward' 
+                      ? rewardTemplates.filter(t => t.points > 0) 
+                      : rewardTemplates.filter(t => t.points < 0)
+                    ).map(template => (
+                      <button
+                        key={template.id}
+                        onClick={() => setBonusTemplateId(template.id)}
+                        className={`w-full border rounded-lg p-3 text-left transition-colors ${
+                          bonusTemplateId === template.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="font-medium text-gray-800">{template.name}</div>
+                        <div className={`font-bold ${template.points > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {template.points > 0 ? '+' : ''}{template.points}分
+                        </div>
+                      </button>
+                    ))}
+                    {rewardTemplates.length === 0 && (
+                      <p className="text-gray-500 text-center py-4">请先在奖惩模板中添加模板</p>
+                    )}
+                  </div>
+                  
+                  {/* 描述 */}
+                  <input
+                    type="text"
+                    value={bonusDescription}
+                    onChange={(e) => setBonusDescription(e.target.value)}
+                    placeholder="添加备注（可选）"
+                    className="w-full px-3 py-2 border rounded-lg mb-4"
+                  />
+                  
+                  {/* 按钮 */}
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1" 
+                      onClick={handleGiveBonus}
+                      disabled={!bonusTemplateId}
+                    >
+                      确认发放
+                    </Button>
+                    <Button 
+                      variant="secondary" 
+                      className="flex-1"
+                      onClick={() => {
+                        setShowBonusModal(false);
+                        setBonusTemplateId('');
+                        setBonusDescription('');
+                        setBonusType('reward');
+                      }}
+                    >
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}
