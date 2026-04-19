@@ -309,18 +309,14 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
 
       {/* 奖品列表 */}
       <Card>
-        <h3 className="font-medium text-gray-700 mb-3">奖品列表</h3>
         <div className="space-y-2">
           {prizes.map((prize, index) => (
-            <div key={prize.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-3 h-3 rounded-full" 
-                  style={{ background: colors[index % colors.length] }}
-                ></div>
-                <span className="text-gray-700">{prize.name}</span>
-              </div>
-              <Badge color="primary">{prize.probability}%</Badge>
+            <div key={prize.id} className="flex items-center gap-2 py-2 border-b border-gray-100 last:border-0">
+              <div 
+                className="w-3 h-3 rounded-full" 
+                style={{ background: colors[index % colors.length] }}
+              ></div>
+              <span className="text-gray-700">{prize.name}</span>
             </div>
           ))}
         </div>
