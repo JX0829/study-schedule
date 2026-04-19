@@ -43,9 +43,10 @@ export function HomePage() {
   const allTemplates = useTemplateStore(state => state.taskTemplates);
   const rewardTemplates = useTemplateStore(state => state.rewardTemplates);
   
-  // 按当前家庭过滤模板
+  // 按当前家庭过滤模板（如果 family 还没加载，显示所有模板）
   const templates = useMemo(() => {
-    return allTemplates.filter(t => t.familyId === family?.id);
+    if (!family?.id) return allTemplates;
+    return allTemplates.filter(t => t.familyId === family.id);
   }, [allTemplates, family?.id]);
   const dailyTasks = useTaskStore(state => state.dailyTasks);
   const getDailyTasksByDate = useTaskStore(state => state.getDailyTasksByDate);
