@@ -70,7 +70,10 @@ export const usePointsStore = create<PointsState>((set, get) => ({
     const newBalance = Math.min(childPoints.balance + points, get().config.pointsLimit);
     const actualEarned = newBalance - childPoints.balance;
     
-    if (actualEarned > 0) {
+    // 累计获得记录原始积分值（不扣除上限）
+    const originalPoints = points;
+    
+    if (actualEarned !== 0) {
       get().addPointsRecord({
         familyId: childPoints.childId, // 简化处理
         childId,
@@ -84,7 +87,10 @@ export const usePointsStore = create<PointsState>((set, get) => ({
 
       const updated = get().childPoints.map(p => 
         p.childId === childId 
-          ? { ...p, balance: newBalance, totalEarned: p.totalEarned + actualEarned }
+          ? { ...p, 
+              balance: newBalance, 
+              totalEarned: points > 0 ? p.totalEarned + points : p.totalEarned + actualEarned 
+            }
           : p
       );
       storage.set(STORAGE_KEYS.CHILD_POINTS, updated);
