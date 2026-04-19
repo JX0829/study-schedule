@@ -272,6 +272,7 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
             onClick={handleSpin}
             disabled={isSpinning || !canSpin}
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-18 h-18 rounded-full bg-gradient-to-br from-white to-gray-100 border-4 border-primary-600 flex flex-col items-center justify-center text-primary-600 font-bold text-xs shadow-lg disabled:opacity-50 disabled:cursor-not-allowed z-20 hover:scale-105 transition-transform"
+            style={{ border: 'none' }}
           >
             {isSpinning ? (
               <span className="text-lg">💫</span>
