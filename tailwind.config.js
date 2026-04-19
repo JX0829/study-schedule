@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 主题色 - 小朋友友好
+        // 主题色 - 小朋友友好（黄色系）
         primary: {
           50: '#fef3c7',
           100: '#fde68a',
@@ -16,6 +16,17 @@ export default {
           400: '#f59e0b',
           500: '#d97706',
           600: '#b45309',
+        },
+        // 家长端主题色（蓝色系）
+        parent: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
         },
         accent: {
           blue: '#60a5fa',

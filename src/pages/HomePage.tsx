@@ -4,10 +4,30 @@
 
 import { useState, useMemo } from 'react';
 import { Page, Card, Button, TaskProgress, DateHeader, TabBar, Badge, PointsBadge, Icon, Modal } from '@/components';
+import { TimePicker } from '@/components/ui/TimePicker';
 import { SignPasswordInput } from '@/components/sign';
 import { useTaskStore, usePointsStore, useFamilyStore, useTemplateStore } from '@/store';
 import { getToday, formatDate } from '@/utils/date';
 import type { DailyTask } from '@/types';
+
+// 获取当前时间的 HH:mm 格式
+function getCurrentTimeString() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
+// 计算结束时间（起始时间 + 30分钟）
+function getEndTimeString(startTime: string) {
+  const [h, m] = startTime.split(':').map(Number);
+  let newH = h;
+  let newM = m + 30;
+  if (newM >= 60) {
+    newH += 1;
+    newM -= 60;
+  }
+  if (newH >= 24) newH = 0;
+  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+}
 
 export function HomePage() {
   const [currentDate, setCurrentDate] = useState(getToday());
@@ -22,7 +42,6 @@ export function HomePage() {
   const currentUser = useFamilyStore(state => state.currentUser);
   const templates = useTemplateStore(state => state.taskTemplates);
   const rewardTemplates = useTemplateStore(state => state.rewardTemplates);
-  const timeSlots = useTaskStore(state => state.timeSlots);
   const dailyTasks = useTaskStore(state => state.dailyTasks);
   const getDailyTasksByDate = useTaskStore(state => state.getDailyTasksByDate);
   const addDailyTask = useTaskStore(state => state.addDailyTask);
@@ -30,8 +49,12 @@ export function HomePage() {
   const getChildPoints = usePointsStore(state => state.getChildPoints);
   const earnPoints = usePointsStore(state => state.earnPoints);
   
-  // 新任务选择的时间段
-  const [newTaskSlotId, setNewTaskSlotId] = useState('');
+  // 新任务的起始和结束时间（孩子自主选择）
+  const [customStartTime, setCustomStartTime] = useState(getCurrentTimeString());
+  const [customEndTime, setCustomEndTime] = useState(getEndTimeString(getCurrentTimeString()));
+  
+  // 任务类型过滤
+  const [filterType, setFilterType] = useState<'all' | 'homework' | 'practice' | 'habit'>('all');
   
   // 获取孩子用户
   const child = users.find(u => u.role === 'child');
@@ -75,13 +98,10 @@ export function HomePage() {
     setCurrentDate(formatDate(next));
   };
   
-  // 从模板选择任务
-  const handleSelectTemplate = (templateId: string, slotId: string) => {
+  // 从模板选择任务（孩子自主选择时间段）
+  const handleSelectTemplate = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
     if (!template || !family || !child) return;
-    
-    const slot = timeSlots.find(s => s.id === slotId);
-    if (!slot) return;
     
     addDailyTask({
       familyId: family.id,
@@ -90,16 +110,32 @@ export function HomePage() {
       name: template.name,
       type: template.type,
       points: template.points,
-      timeSlotId: slotId,
-      timeSlotStart: slot.startTime,
-      timeSlotEnd: slot.endTime,
+      timeSlotId: '', // 不使用时间段 ID
+      timeSlotStart: customStartTime,
+      timeSlotEnd: customEndTime,
       status: 'pending',
     });
     
     setShowAddTask(false);
   };
   
-
+  // 打开添加任务模态框时自动计算时间
+  const handleOpenAddTask = () => {
+    // 自动计算起始时间
+    if (completedTasks.length > 0) {
+      // 从最后一个任务的结束时间 + 10分钟
+      const lastTask = completedTasks[completedTasks.length - 1];
+      const newStart = getEndTimeString(lastTask.timeSlotEnd || '00:00');
+      setCustomStartTime(newStart);
+      setCustomEndTime(getEndTimeString(newStart));
+    } else {
+      // 从当前时间开始
+      const now = getCurrentTimeString();
+      setCustomStartTime(now);
+      setCustomEndTime(getEndTimeString(now));
+    }
+    setShowAddTask(true);
+  };
   
   // 标记完成（自己确认）
   const handleMarkComplete = (taskId: string) => {
@@ -184,7 +220,7 @@ export function HomePage() {
           )}
           
           {/* 选择任务按钮 */}
-          <Button className="w-full mb-4" onClick={() => setShowAddTask(true)}>
+          <Button className="w-full mb-4" onClick={handleOpenAddTask}>
             + 选择今日任务
           </Button>
           
@@ -371,45 +407,74 @@ export function HomePage() {
       {/* 添加任务模态框 */}
       <Modal 
         isOpen={showAddTask}
-        onClose={() => {
-          setShowAddTask(false);
-          setNewTaskSlotId('');
-        }}
+        onClose={() => setShowAddTask(false)}
         title="选择任务"
       >
-        {/* 选择时间段 */}
+        {/* 时间选择 */}
         <div className="mb-4">
-          <label className="text-gray-500 text-sm block mb-2">选择时间段</label>
-          <div className="flex gap-2">
-            {timeSlots.map(slot => (
-              <button
-                key={slot.id}
-                onClick={() => setNewTaskSlotId(slot.id)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  newTaskSlotId === slot.id 
-                    ? 'bg-primary-400 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {slot.name}
-              </button>
-            ))}
-          </div>
+          <label className="text-gray-500 text-sm block mb-3">任务时间段</label>
+          <TimePicker
+            startTime={customStartTime}
+            endTime={customEndTime}
+            onStartTimeChange={setCustomStartTime}
+            onEndTimeChange={setCustomEndTime}
+          />
         </div>
         
         {/* 从模板选择任务 */}
-        {newTaskSlotId && templates.length > 0 ? (
+        {templates.length > 0 ? (
           <div>
             <label className="text-gray-500 text-sm block mb-2">选择任务模板</label>
+            
+            {/* 任务类型过滤 */}
+            <div className="flex gap-2 mb-3 flex-wrap">
+              <button
+                onClick={() => setFilterType('all')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filterType === 'all'
+                    ? 'bg-primary-400 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                全部 ({templates.length})
+              </button>
+              <button
+                onClick={() => setFilterType('homework')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filterType === 'homework'
+                    ? 'bg-blue-400 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                作业 ({templates.filter(t => t.type === 'homework').length})
+              </button>
+              <button
+                onClick={() => setFilterType('practice')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filterType === 'practice'
+                    ? 'bg-purple-400 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                练习 ({templates.filter(t => t.type === 'practice').length})
+              </button>
+              <button
+                onClick={() => setFilterType('habit')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filterType === 'habit'
+                    ? 'bg-green-400 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                习惯 ({templates.filter(t => t.type === 'habit').length})
+              </button>
+            </div>
+            
             <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
-              {templates.map(template => (
+              {(filterType === 'all' ? templates : templates.filter(t => t.type === filterType)).map(template => (
                 <button
                   key={template.id}
-                  onClick={() => {
-                    handleSelectTemplate(template.id, newTaskSlotId);
-                    setShowAddTask(false);
-                    setNewTaskSlotId('');
-                  }}
+                  onClick={() => handleSelectTemplate(template.id)}
                   className="border rounded-lg p-3 text-left hover:bg-primary-50 hover:border-primary-300 transition-colors"
                 >
                   <div className="font-medium text-gray-800">{template.name}</div>
@@ -423,13 +488,13 @@ export function HomePage() {
               ))}
             </div>
           </div>
-        ) : newTaskSlotId && templates.length === 0 ? (
+        ) : (
           <div className="text-center py-8">
             <Icon name="calendar" size={40} className="text-gray-300 mb-3" />
             <p className="text-gray-500">家长还没有设置任务模板</p>
             <p className="text-gray-400 text-sm mt-1">请让家长先在家长端添加任务模板</p>
           </div>
-        ) : null}
+        )}
       </Modal>
 
       {/* 签字确认模态框 */}

@@ -89,3 +89,13 @@
     @apply p-6;
   }
 }
+
+/* 隐藏滚动条 - iOS Picker 风格 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

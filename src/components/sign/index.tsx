@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { Button, Card } from '@/components/ui';
+import { usePasswordStore } from '@/store';
 
 interface SignPasswordInputProps {
   onConfirm: () => void;
@@ -13,11 +14,9 @@ interface SignPasswordInputProps {
 
 export function SignPasswordInput({ onConfirm, onCancel, title = '签字确认' }: SignPasswordInputProps) {
   const [password, setPassword] = useState('');
-  const [showSignPassword, setShowSignPassword] = useState(false);
   const [error, setError] = useState('');
   
-  const { getSignPassword, verifySignPassword } = usePasswordStore.getState();
-  const signPassword = getSignPassword();
+  const { verifySignPassword } = usePasswordStore.getState();
 
   const handleConfirm = () => {
     if (verifySignPassword(password)) {
@@ -29,28 +28,11 @@ export function SignPasswordInput({ onConfirm, onCancel, title = '签字确认' 
   };
 
   return (
-    <Card className="max-w-sm mx-auto">
+    <Card className="w-full">
       <h3 className="font-medium text-gray-700 mb-4 text-center">{title}</h3>
-      
-      {/* 今日签字密码显示 */}
-      <div className="mb-4">
-        <label className="text-gray-500 text-sm block mb-1">今日签字密码</label>
-        <div className="flex items-center gap-2">
-          <div className="px-4 py-2 bg-gray-100 rounded-lg text-lg font-mono flex-1">
-            {showSignPassword ? signPassword : '****'}
-          </div>
-          <button
-            onClick={() => setShowSignPassword(!showSignPassword)}
-            className="p-2 text-gray-500 hover:text-gray-700"
-          >
-            {showSignPassword ? '👁️' : '👁️‍🗨️'}
-          </button>
-        </div>
-      </div>
       
       {/* 输入签字密码 */}
       <div className="mb-4">
-        <label className="text-gray-500 text-sm block mb-1">输入签字密码确认</label>
         <input
           type="text"
           value={password}
@@ -58,11 +40,11 @@ export function SignPasswordInput({ onConfirm, onCancel, title = '签字确认' 
             setPassword(e.target.value.toUpperCase());
             setError('');
           }}
-          placeholder="请输入4位签字密码"
+          placeholder="请输入家长签字密码"
           maxLength={4}
-          className="w-full px-4 py-2 border rounded-lg text-center text-lg font-mono uppercase"
+          className="w-full px-4 py-3 border rounded-lg text-center text-xl font-mono uppercase focus:outline-none focus:ring-2 focus:ring-primary-400"
         />
-        {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+        {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
       </div>
       
       {/* 操作按钮 */}
@@ -79,6 +61,3 @@ export function SignPasswordInput({ onConfirm, onCancel, title = '签字确认' 
     </Card>
   );
 }
-
-// 需要导入 usePasswordStore
-import { usePasswordStore } from '@/store';

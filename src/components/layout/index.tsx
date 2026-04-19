@@ -42,13 +42,20 @@ interface PageProps {
   showHeader?: boolean;
   headerRight?: ReactNode;
   className?: string;
+  /** 页面类型：child（小孩端黄色）或 parent（家长端蓝色） */
+  theme?: 'child' | 'parent';
 }
 
-export function Page({ children, title, showHeader = true, headerRight, className = '' }: PageProps) {
+export function Page({ children, title, showHeader = true, headerRight, className = '', theme = 'child' }: PageProps) {
+  const themeClasses = {
+    child: 'bg-gradient-to-b from-yellow-50 to-orange-50',
+    parent: 'bg-gradient-to-b from-parent-50 to-parent-100',
+  };
+
   return (
-    <div className={`min-h-screen bg-gradient-to-b from-yellow-50 to-orange-50 ${className}`}>
+    <div className={`min-h-screen ${themeClasses[theme]} ${className}`}>
       {showHeader && <Header title={title} rightContent={headerRight} />}
-      <main className="max-w-md mx-auto px-4 py-4">
+      <main className="w-full px-4 py-4 md:max-w-2xl md:mx-auto lg:max-w-4xl">
         {children}
       </main>
     </div>

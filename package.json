@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:child": "vite",
-    "dev:parent": "vite --config vite-parent.config.ts",
-    "dev:all": "npm run dev:child & npm run dev:parent",
+    "dev:child": "echo '孩子端: http://localhost:3333/' && vite",
+    "dev:parent": "echo '家长端: http://localhost:3333/parent/index.html' && vite",
+    "dev:all": "npm run dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -107,6 +107,8 @@ export const STORAGE_KEYS = {
   USERS: 'users',
   CHILD_POINTS: 'child_points',
   TASK_TEMPLATES: 'task_templates',
+  TASK_TEMPLATE_ITEMS: 'task_template_items',
+  REWARD_TEMPLATE_ITEMS: 'reward_template_items',
   TIME_SLOTS: 'time_slots',
   DAILY_TASKS: 'daily_tasks',
   POINTS_RECORDS: 'points_records',

@@ -49,26 +49,26 @@ export function ParentLoginPage({ onLogin }: ParentLoginProps) {
   };
 
   return (
-    <Page showHeader={false}>
+    <Page showHeader={false} theme="parent">
       <div className="flex flex-col items-center justify-center min-h-[80vh]">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="text-6xl mb-4">🔐</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          <h1 className="text-2xl font-bold text-parent-700 mb-2">
             家长端
           </h1>
-          <p className="text-gray-500">
+          <p className="text-parent-600">
             小朋友任务规划系统
           </p>
         </div>
 
         {/* 创建密码 */}
         {step === 'create' && (
-          <Card className="w-full max-w-sm">
-            <h3 className="font-medium text-gray-700 mb-4 text-center">
+          <Card className="w-full md:max-w-md">
+            <h3 className="font-medium text-parent-700 mb-4 text-center">
               创建登录密码
             </h3>
-            <p className="text-gray-500 text-sm mb-4 text-center">
+            <p className="text-parent-600 text-sm mb-4 text-center">
               首次使用，请设置家长登录密码
             </p>
             
@@ -100,8 +100,8 @@ export function ParentLoginPage({ onLogin }: ParentLoginProps) {
 
         {/* 登录验证 */}
         {step === 'login' && (
-          <Card className="w-full max-w-sm">
-            <h3 className="font-medium text-gray-700 mb-4 text-center">
+          <Card className="w-full md:max-w-md">
+            <h3 className="font-medium text-parent-700 mb-4 text-center">
               输入密码登录
             </h3>
             

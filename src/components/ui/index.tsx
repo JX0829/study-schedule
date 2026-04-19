@@ -283,6 +283,84 @@ export function Tabs({ tabs, activeKey, onChange }: TabsProps) {
   );
 }
 
+// ============ PointsSlider 组件（积分范围选择 -50 到 50）============
+
+interface PointsSliderProps {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  showQuickSelect?: boolean;
+  label?: string;
+}
+
+export function PointsSlider({
+  value,
+  onChange,
+  min = -50,
+  max = 50,
+  showQuickSelect = true,
+  label = '积分'
+}: PointsSliderProps) {
+  // 快速选择按钮的常用值
+  const quickValues = [-50, -20, -10, -5, 0, 5, 10, 20, 50];
+  
+  // 根据值显示颜色
+  const getValueColor = (val: number) => {
+    if (val > 0) return 'text-green-600 bg-green-100';
+    if (val < 0) return 'text-red-600 bg-red-100';
+    return 'text-gray-600 bg-gray-100';
+  }; 
+
+  return (
+    <div className="space-y-3">
+      {label && <label className="text-gray-500 text-sm">{label}</label>}
+      
+      {/* 快速选择按钮 */}
+      {showQuickSelect && (
+        <div className="flex flex-wrap gap-2">
+          {quickValues.map(v => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => onChange(v)}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                value === v
+                  ? getValueColor(v) + ' ring-2 ring-offset-1'
+                  : 'text-gray-500 bg-gray-50 hover:bg-gray-100'
+              }`}
+            >
+              {v > 0 ? `+${v}` : v}
+            </button>
+          ))}
+        </div>
+      )}
+      
+      {/* 滑块 */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-red-500 w-8">-{Math.abs(min)}</span>
+        <input
+          type="range"
+          min={min}
+          max={max}
+          value={value}
+          onChange={(e) => onChange(parseInt(e.target.value))}
+          className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-parent-500"
+        />
+        <span className="text-sm text-green-500 w-8">+{max}</span>
+      </div>
+      
+      {/* 当前值显示 */}
+      <div className="text-center">
+        <span className={`px-4 py-2 rounded-lg font-bold text-lg ${getValueColor(value)}`}
+        >
+          {value > 0 ? `+${value}` : value} 分
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ============ Icon 组件（小程序迁移友好）============
 
 interface IconProps {
@@ -336,4 +414,4 @@ export function Icon({ name, size = 24, className = '' }: IconProps) {
       {icons[name] || name}
     </span>
   );
-}
+}export { TimePicker } from "./TimePicker";

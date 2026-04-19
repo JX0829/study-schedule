@@ -1,13 +1,15 @@
 /**
  * 家长端设置页面 - 增强版
+ * 功能：
+ * 1. 任务模板剪切板导入
+ * 2. 奖惩模板剪切板导入
  */
 
 import { useState, useEffect } from 'react';
 import { Page, Card, Button, Badge, Tabs, Icon } from '@/components';
-import { useFamilyStore, useTaskStore, useRewardStore, usePasswordStore, useTemplateStore } from '@/store';
+import { useFamilyStore, useRewardStore, usePasswordStore, useTemplateStore } from '@/store';
 import { defaultSystemConfig } from '@/utils/presets';
-import type { TimeSlot, SystemConfig } from '@/types';
-import type { TaskTemplateItem, RewardTemplateItem } from '@/store/template';
+import type { SystemConfig } from '@/types';
 
 export function ParentPage() {
   const [activeTab, setActiveTab] = useState('sign');
@@ -16,10 +18,6 @@ export function ParentPage() {
   // Store
   const family = useFamilyStore(state => state.family);
   const users = useFamilyStore(state => state.users);
-  const timeSlots = useTaskStore(state => state.timeSlots);
-  const addTimeSlot = useTaskStore(state => state.addTimeSlot);
-  const updateTimeSlot = useTaskStore(state => state.updateTimeSlot);
-  const deleteTimeSlot = useTaskStore(state => state.deleteTimeSlot);
   const rewards = useRewardStore(state => state.rewards);
   const addReward = useRewardStore(state => state.addReward);
   const deleteReward = useRewardStore(state => state.deleteReward);
@@ -29,24 +27,15 @@ export function ParentPage() {
   
   const taskTemplates = useTemplateStore(state => state.taskTemplates);
   const addTaskTemplate = useTemplateStore(state => state.addTaskTemplate);
-  const updateTaskTemplate = useTemplateStore(state => state.updateTaskTemplate);
   const deleteTaskTemplate = useTemplateStore(state => state.deleteTaskTemplate);
   const rewardTemplates = useTemplateStore(state => state.rewardTemplates);
   const addRewardTemplate = useTemplateStore(state => state.addRewardTemplate);
-  const updateRewardTemplate = useTemplateStore(state => state.updateRewardTemplate);
   const deleteRewardTemplate = useTemplateStore(state => state.deleteRewardTemplate);
   const initDefaultTemplates = useTemplateStore(state => state.initDefaultTemplates);
   
   // 家庭信息编辑
   const [editingFamily, setEditingFamily] = useState(false);
   const [familyName, setFamilyName] = useState(family?.name || '');
-  
-  // 时间段编辑
-  const [editingSlot, setEditingSlot] = useState<string | null>(null);
-  const [newSlotName, setNewSlotName] = useState('');
-  const [newSlotStart, setNewSlotStart] = useState('');
-  const [newSlotEnd, setNewSlotEnd] = useState('');
-  const [showAddSlot, setShowAddSlot] = useState(false);
   
   // 积分配置
   const [pointsConfig, setPointsConfig] = useState<SystemConfig>(defaultSystemConfig);
@@ -57,10 +46,20 @@ export function ParentPage() {
   const [newTemplatePoints, setNewTemplatePoints] = useState('');
   const [newTemplateType, setNewTemplateType] = useState<'homework' | 'practice' | 'habit'>('habit');
   
+  // 任务模板剪切板导入
+  const [showTaskClipboardImport, setShowTaskClipboardImport] = useState(false);
+  const [taskClipboardText, setTaskClipboardText] = useState('');
+  const [taskImportPreview, setTaskImportPreview] = useState<Array<{ name: string; points: number; type: 'homework' | 'practice' | 'habit' }>>([]);
+  
   // 奖惩模板编辑
   const [showAddRewardTemplate, setShowAddRewardTemplate] = useState(false);
   const [newRewardTemplateName, setNewRewardTemplateName] = useState('');
   const [newRewardTemplatePoints, setNewRewardTemplatePoints] = useState('');
+  
+  // 奖惩模板剪切板导入
+  const [showRewardClipboardImport, setShowRewardClipboardImport] = useState(false);
+  const [rewardClipboardText, setRewardClipboardText] = useState('');
+  const [rewardImportPreview, setRewardImportPreview] = useState<Array<{ name: string; points: number }>>([]);
   
   // 奖励编辑
   const [showAddReward, setShowAddReward] = useState(false);
@@ -77,42 +76,40 @@ export function ParentPage() {
     generateSignPassword();
   }, []);
 
-  // 添加时间段
-  const handleAddSlot = () => {
-    if (!family || !newSlotName || !newSlotStart || !newSlotEnd) return;
-    
-    addTimeSlot({
-      familyId: family.id,
-      name: newSlotName,
-      startTime: newSlotStart,
-      endTime: newSlotEnd,
-      order: timeSlots.length + 1,
-    });
-    
-    setNewSlotName('');
-    setNewSlotStart('');
-    setNewSlotEnd('');
-    setShowAddSlot(false);
-  };
+  // 解析剪切板文本
+  // 格式：名称(分值)(类型)，例如：每天自己规划自己的学习和生活(5)(习惯)
+  const parseClipboardText = (text: string, isReward: boolean = false) => {
+    const lines = text.split('\n').filter((line) => line.trim());
+    const result: Array<{ name: string; points: number; type?: 'homework' | 'practice' | 'habit' }> = [];
 
-  // 保存时间段编辑
-  const handleSaveSlot = (slotId: string) => {
-    if (newSlotName && newSlotStart && newSlotEnd) {
-      updateTimeSlot(slotId, {
-        name: newSlotName,
-        startTime: newSlotStart,
-        endTime: newSlotEnd,
-      });
+    for (const line of lines) {
+      // 匹配格式：名称(分值)(类型) 或 名称(分值)
+      // 支持中文括号（）和英文括号()
+      const regex = /^(.+?)[\(\uff08](-?\d+)[\)\uff09](?:[\(\uff08]([^\)\uff09]+)[\)\uff09])?$/;
+      const match = line.match(regex);
+      
+      if (match) {
+        const name = match[1].trim();
+        const points = parseInt(match[2]);
+        const typeStr = match[3]?.trim() || '';
+        
+        if (name && !isNaN(points)) {
+          if (isReward) {
+            // 奖惩模板：只有名称和分值
+            result.push({ name, points });
+          } else {
+            // 任务模板：需要解析类型
+            let type: 'homework' | 'practice' | 'habit' = 'habit';
+            if (typeStr === '作业' || typeStr === 'homework') type = 'homework';
+            else if (typeStr === '练习' || typeStr === 'practice') type = 'practice';
+            else type = 'habit';
+            result.push({ name, points, type });
+          }
+        }
+      }
     }
-    setEditingSlot(null);
-  };
 
-  // 开始编辑时间段
-  const startEditSlot = (slot: TimeSlot) => {
-    setEditingSlot(slot.id);
-    setNewSlotName(slot.name);
-    setNewSlotStart(slot.startTime);
-    setNewSlotEnd(slot.endTime);
+    return result;
   };
 
   // 添加任务模板
@@ -132,6 +129,25 @@ export function ParentPage() {
     setShowAddTaskTemplate(false);
   };
 
+  // 执行任务模板剪切板导入
+  const handleTaskClipboardImport = () => {
+    if (!family || taskImportPreview.length === 0) return;
+
+    taskImportPreview.forEach((item) => {
+      addTaskTemplate({
+        familyId: family.id,
+        name: item.name,
+        type: item.type,
+        points: item.points,
+        isCustom: true,
+      });
+    });
+
+    setShowTaskClipboardImport(false);
+    setTaskClipboardText('');
+    setTaskImportPreview([]);
+  };
+
   // 添加奖惩模板
   const handleAddRewardTemplate = () => {
     if (!family || !newRewardTemplateName || !newRewardTemplatePoints) return;
@@ -146,6 +162,24 @@ export function ParentPage() {
     setNewRewardTemplateName('');
     setNewRewardTemplatePoints('');
     setShowAddRewardTemplate(false);
+  };
+
+  // 执行奖惩模板剪切板导入
+  const handleRewardClipboardImport = () => {
+    if (!family || rewardImportPreview.length === 0) return;
+
+    rewardImportPreview.forEach((item) => {
+      addRewardTemplate({
+        familyId: family.id,
+        name: item.name,
+        points: item.points,
+        isCustom: true,
+      });
+    });
+
+    setShowRewardClipboardImport(false);
+    setRewardClipboardText('');
+    setRewardImportPreview([]);
   };
 
   // 初始化默认模板
@@ -180,7 +214,6 @@ export function ParentPage() {
     { key: 'sign', label: '签字密码' },
     { key: 'templates', label: '任务模板' },
     { key: 'rewards', label: '奖惩模板' },
-    { key: 'slots', label: '时间段' },
     { key: 'config', label: '配置' },
   ];
 
@@ -333,9 +366,92 @@ export function ParentPage() {
                 </div>
               </Card>
             ) : (
-              <Button className="w-full" onClick={() => setShowAddTaskTemplate(true)}>
-                + 添加任务模板
-              </Button>
+              <div className="space-y-2">
+                <Button className="w-full" onClick={() => setShowAddTaskTemplate(true)}>
+                  + 添加任务模板
+                </Button>
+                <Button variant="secondary" className="w-full" onClick={() => setShowTaskClipboardImport(true)}>
+                  📋 剪切板批量导入
+                </Button>
+              </div>
+            )}
+
+            {/* 任务模板剪切板导入 */}
+            {showTaskClipboardImport && (
+              <Card>
+                <h3 className="font-medium text-gray-700 mb-3">📋 剪切板批量导入</h3>
+                <p className="text-gray-500 text-sm mb-3">
+                  格式：名称(分值)(类型)，例如：完成作业(10)(作业)
+                </p>
+                <textarea
+                  value={taskClipboardText}
+                  onChange={(e) => {
+                    setTaskClipboardText(e.target.value);
+                    setTaskImportPreview(parseClipboardText(e.target.value, false));
+                  }}
+                  placeholder="每天自己规划自己的学习和生活(5)(习惯)\n完成作业(10)(作业)\n课外阅读(8)(练习)\n..."
+                  className="w-full px-3 py-2 border rounded-lg min-h-[120px]"
+                />
+
+                {/* 预览解析结果 */}
+                {taskImportPreview.length > 0 && (
+                  <div className="mt-3">
+                    <div className="border rounded-lg p-2 bg-gray-50">
+                      <p className="text-gray-500 text-sm mb-2">
+                        预览（{taskImportPreview.length} 个任务）：
+                      </p>
+                      <div className="max-h-[200px] overflow-y-auto">
+                        {taskImportPreview.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between py-1 border-b border-gray-200 last:border-0"
+                          >
+                            <span className="text-gray-700">{item.name}</span>
+                            <div className="flex items-center gap-2">
+                              <Badge color={item.type === 'homework' ? 'blue' : item.type === 'practice' ? 'purple' : 'success'}>
+                                {item.type === 'homework' ? '作业' : item.type === 'practice' ? '练习' : '习惯'}
+                              </Badge>
+                              <Badge color="primary">+{item.points}分</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    onClick={handleTaskClipboardImport}
+                    disabled={taskImportPreview.length === 0}
+                  >
+                    导入 {taskImportPreview.length > 0 && `(${taskImportPreview.length}个)`}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setShowTaskClipboardImport(false);
+                      setTaskClipboardText('');
+                      setTaskImportPreview([]);
+                    }}
+                  >
+                    取消
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {/* 剪切板导入说明 */}
+            {!showAddTaskTemplate && !showTaskClipboardImport && taskTemplates.length === 0 && (
+              <Card className="bg-blue-50 border-blue-200">
+                <h3 className="font-medium text-blue-700 mb-2">💡 快速导入提示</h3>
+                <div className="text-sm text-blue-600 space-y-1">
+                  <p>• 点击"剪切板批量导入"从 Excel 快速导入</p>
+                  <p>• 格式：名称(分值)(类型)</p>
+                  <p>• 类型：作业、练习、习惯</p>
+                  <p>• 支持中文括号（）和英文括号()</p>
+                </div>
+              </Card>
             )}
           </div>
         )}
@@ -409,115 +525,89 @@ export function ParentPage() {
                 </div>
               </Card>
             ) : (
-              <Button className="w-full" onClick={() => setShowAddRewardTemplate(true)}>
-                + 添加奖惩模板
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* 时间段设置 */}
-        {activeTab === 'slots' && (
-          <div className="space-y-4">
-            <Card>
-              <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                <Icon name="clock" size={20} />
-                时间段配置
-              </h3>
-              
-              <div className="space-y-3">
-                {timeSlots.map(slot => (
-                  <div key={slot.id} className="border rounded-lg p-3">
-                    {editingSlot === slot.id ? (
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          value={newSlotName}
-                          onChange={(e) => setNewSlotName(e.target.value)}
-                          className="w-full px-2 py-1 border rounded"
-                        />
-                        <div className="flex gap-2">
-                          <input
-                            type="time"
-                            value={newSlotStart}
-                            onChange={(e) => setNewSlotStart(e.target.value)}
-                            className="px-2 py-1 border rounded"
-                          />
-                          <input
-                            type="time"
-                            value={newSlotEnd}
-                            onChange={(e) => setNewSlotEnd(e.target.value)}
-                            className="px-2 py-1 border rounded"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleSaveSlot(slot.id)}>保存</Button>
-                          <Button size="sm" variant="secondary" onClick={() => setEditingSlot(null)}>取消</Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl">
-                            {slot.startTime.startsWith('06') || slot.startTime.startsWith('07') ? '☀️' :
-                             slot.startTime.startsWith('12') ? '🌤️' : '🌙'}
-                          </span>
-                          <div>
-                            <div className="font-medium">{slot.name}</div>
-                            <div className="text-sm text-gray-500">{slot.startTime} - {slot.endTime}</div>
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => startEditSlot(slot)}>编辑</Button>
-                          <Button size="sm" variant="danger" onClick={() => deleteTimeSlot(slot.id)}>删除</Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+              <div className="space-y-2">
+                <Button className="w-full" onClick={() => setShowAddRewardTemplate(true)}>
+                  + 添加奖惩模板
+                </Button>
+                <Button variant="secondary" className="w-full" onClick={() => setShowRewardClipboardImport(true)}>
+                  📋 剪切板批量导入
+                </Button>
               </div>
-            </Card>
+            )}
 
-            {/* 添加时间段 */}
-            {showAddSlot ? (
+            {/* 奖惩模板剪切板导入 */}
+            {showRewardClipboardImport && (
               <Card>
-                <h3 className="font-medium text-gray-700 mb-3">添加时间段</h3>
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={newSlotName}
-                    onChange={(e) => setNewSlotName(e.target.value)}
-                    placeholder="时间段名称"
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <label className="text-gray-500 text-sm">开始</label>
-                      <input
-                        type="time"
-                        value={newSlotStart}
-                        onChange={(e) => setNewSlotStart(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg mt-1"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-gray-500 text-sm">结束</label>
-                      <input
-                        type="time"
-                        value={newSlotEnd}
-                        onChange={(e) => setNewSlotEnd(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg mt-1"
-                      />
+                <h3 className="font-medium text-gray-700 mb-3">📋 剪切板批量导入</h3>
+                <p className="text-gray-500 text-sm mb-3">
+                  格式：名称(分值)，正数为奖励，负数为惩罚
+                </p>
+                <textarea
+                  value={rewardClipboardText}
+                  onChange={(e) => {
+                    setRewardClipboardText(e.target.value);
+                    setRewardImportPreview(parseClipboardText(e.target.value, true));
+                  }}
+                  placeholder="考试进步(20)\n主动帮助家务(10)\n迟到(-5)\n未按时完成作业(-10)\n..."
+                  className="w-full px-3 py-2 border rounded-lg min-h-[120px]"
+                />
+
+                {/* 预览解析结果 */}
+                {rewardImportPreview.length > 0 && (
+                  <div className="mt-3">
+                    <div className="border rounded-lg p-2 bg-gray-50">
+                      <p className="text-gray-500 text-sm mb-2">
+                        预览（{rewardImportPreview.length} 个奖惩）：
+                      </p>
+                      <div className="max-h-[200px] overflow-y-auto">
+                        {rewardImportPreview.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between py-1 border-b border-gray-200 last:border-0"
+                          >
+                            <span className="text-gray-700">{item.name}</span>
+                            <Badge color={item.points > 0 ? 'success' : 'danger'}>
+                              {item.points > 0 ? `+${item.points}` : item.points}分
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button onClick={handleAddSlot}>添加</Button>
-                    <Button variant="secondary" onClick={() => setShowAddSlot(false)}>取消</Button>
-                  </div>
+                )}
+
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    onClick={handleRewardClipboardImport}
+                    disabled={rewardImportPreview.length === 0}
+                  >
+                    导入 {rewardImportPreview.length > 0 && `(${rewardImportPreview.length}个)`}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setShowRewardClipboardImport(false);
+                      setRewardClipboardText('');
+                      setRewardImportPreview([]);
+                    }}
+                  >
+                    取消
+                  </Button>
                 </div>
               </Card>
-            ) : (
-              <Button className="w-full" onClick={() => setShowAddSlot(true)}>+ 添加时间段</Button>
+            )}
+
+            {/* 剪切板导入说明 */}
+            {!showAddRewardTemplate && !showRewardClipboardImport && rewardTemplates.length === 0 && (
+              <Card className="bg-blue-50 border-blue-200">
+                <h3 className="font-medium text-blue-700 mb-2">💡 快速导入提示</h3>
+                <div className="text-sm text-blue-600 space-y-1">
+                  <p>• 点击"剪切板批量导入"从 Excel 快速导入</p>
+                  <p>• 格式：名称(分值)</p>
+                  <p>• 正数为奖励，负数为惩罚</p>
+                  <p>• 支持中文括号（）和英文括号()</p>
+                </div>
+              </Card>
             )}
           </div>
         )}
