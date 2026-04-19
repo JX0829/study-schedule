@@ -106,6 +106,9 @@ export function ParentPage() {
   const [newPrizePoints, setNewPrizePoints] = useState('');
   const [newPrizeProbability, setNewPrizeProbability] = useState('');
   
+  // 每日抽奖次数配置
+  const [dailySpinCount, setDailySpinCount] = useState(1);
+  
   // 奖品编辑
   const [editingPrize, setEditingPrize] = useState<{id: string; name: string; points: number; probability: number} | null>(null);
   const [editPrizeName, setEditPrizeName] = useState('');
@@ -129,6 +132,12 @@ export function ParentPage() {
       ];
       setPrizes(defaultPrizes);
       localStorage.setItem('prizes', JSON.stringify(defaultPrizes));
+    }
+    
+    // 加载每日抽奖次数
+    const savedSpinCount = localStorage.getItem('dailySpinCount');
+    if (savedSpinCount) {
+      setDailySpinCount(parseInt(savedSpinCount));
     }
   }, []);
 
@@ -155,6 +164,12 @@ export function ParentPage() {
     const updated = prizes.filter(p => p.id !== id);
     setPrizes(updated);
     localStorage.setItem('prizes', JSON.stringify(updated));
+  };
+
+  // 保存每日抽奖次数
+  const handleSaveDailySpinCount = (count: number) => {
+    setDailySpinCount(count);
+    localStorage.setItem('dailySpinCount', String(count));
   };
 
   // 编辑奖品
@@ -1152,6 +1167,29 @@ export function ParentPage() {
               <p className="text-gray-500 text-sm mb-4">
                 配置抽奖大转盘的奖品，中奖概率总和应为100%
               </p>
+              
+              {/* 每日抽奖次数配置 */}
+              <div className="bg-blue-50 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-gray-700">每日抽奖次数</div>
+                    <div className="text-gray-500 text-sm">当天有效，过期作废</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleSaveDailySpinCount(Math.max(1, dailySpinCount - 1))}
+                    >-</Button>
+                    <span className="text-xl font-bold text-primary-600 w-8 text-center">{dailySpinCount}</span>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleSaveDailySpinCount(dailySpinCount + 1)}
+                    >+</Button>
+                  </div>
+                </div>
+              </div>
               
               <div className="space-y-2 mb-4">
                 {prizes.map(prize => (
