@@ -1,29 +1,37 @@
 /**
  * 家长端设置页面 - 增强版
  * 功能：
- * 1. 任务模板剪切板导入
- * 2. 奖惩模板剪切板导入
+ * 1. 今日任务 - 查看孩子当天任务并直接签字确认
+ * 2. 任务模板剪切板导入
+ * 3. 奖惩模板剪切板导入
  */
 
-import { useState, useEffect } from 'react';
-import { Page, Card, Button, Badge, Tabs, Icon } from '@/components';
-import { useFamilyStore, useRewardStore, usePasswordStore, useTemplateStore } from '@/store';
+import { useState, useEffect, useMemo } from 'react';
+import { Page, Card, Button, Badge, Tabs, Icon, TaskProgress } from '@/components';
+import { useFamilyStore, useTaskStore, useRewardStore, usePasswordStore, useTemplateStore, usePointsStore } from '@/store';
 import { defaultSystemConfig } from '@/utils/presets';
-import type { SystemConfig } from '@/types';
+import { getToday, formatDate } from '@/utils/date';
+import type { SystemConfig, DailyTask } from '@/types';
 
 export function ParentPage() {
-  const [activeTab, setActiveTab] = useState('sign');
+  const [activeTab, setActiveTab] = useState('today');
   const [showSignPassword, setShowSignPassword] = useState(false);
+  const [currentDate, setCurrentDate] = useState(getToday());
   
   // Store
   const family = useFamilyStore(state => state.family);
   const users = useFamilyStore(state => state.users);
+  const dailyTasks = useTaskStore(state => state.dailyTasks);
+  const getDailyTasksByDate = useTaskStore(state => state.getDailyTasksByDate);
+  const updateDailyTaskStatus = useTaskStore(state => state.updateDailyTaskStatus);
   const rewards = useRewardStore(state => state.rewards);
   const addReward = useRewardStore(state => state.addReward);
   const deleteReward = useRewardStore(state => state.deleteReward);
   const getSignPassword = usePasswordStore(state => state.getSignPassword);
   const generateSignPassword = usePasswordStore(state => state.generateSignPassword);
   const logout = usePasswordStore(state => state.logout);
+  const getChildPoints = usePointsStore(state => state.getChildPoints);
+  const earnPoints = usePointsStore(state => state.earnPoints);
   
   const taskTemplates = useTemplateStore(state => state.taskTemplates);
   const addTaskTemplate = useTemplateStore(state => state.addTaskTemplate);
@@ -69,22 +77,40 @@ export function ParentPage() {
   const parent = users.find(u => u.role === 'parent');
   const child = users.find(u => u.role === 'child');
 
+  // 获取孩子积分
+  const childPoints = child ? getChildPoints(child.id) : null;
+
   // 获取今日签字密码
   const signPassword = getSignPassword();
+
+  // 获取孩子的当日任务
+  const todayTasks = useMemo(() => {
+    return getDailyTasksByDate(currentDate);
+  }, [currentDate, dailyTasks]);
+  
+  // 按状态分组任务
+  const pendingTasks = todayTasks.filter(t => t.status === 'pending');
+  const submittedTasks = todayTasks.filter(t => t.status === 'submitted');
+  const completedTasks = todayTasks.filter(t => t.status === 'completed');
+  
+  // 进度
+  const progress = useMemo(() => {
+    const completed = completedTasks.length;
+    const pointsEarned = completedTasks.reduce((sum, t) => sum + t.points, 0);
+    const pendingPoints = [...pendingTasks, ...submittedTasks].reduce((sum, t) => sum + t.points, 0);
+    return { completed, total: todayTasks.length, pointsEarned, totalPoints: pointsEarned + pendingPoints };
+  }, [todayTasks, completedTasks, pendingTasks, submittedTasks]);
 
   useEffect(() => {
     generateSignPassword();
   }, []);
 
   // 解析剪切板文本
-  // 格式：名称(分值)(类型)，例如：每天自己规划自己的学习和生活(5)(习惯)
   const parseClipboardText = (text: string, isReward: boolean = false) => {
     const lines = text.split('\n').filter((line) => line.trim());
     const result: Array<{ name: string; points: number; type?: 'homework' | 'practice' | 'habit' }> = [];
 
     for (const line of lines) {
-      // 匹配格式：名称(分值)(类型) 或 名称(分值)
-      // 支持中文括号（）和英文括号()
       const regex = /^(.+?)[\(\uff08](-?\d+)[\)\uff09](?:[\(\uff08]([^\)\uff09]+)[\)\uff09])?$/;
       const match = line.match(regex);
       
@@ -95,21 +121,31 @@ export function ParentPage() {
         
         if (name && !isNaN(points)) {
           if (isReward) {
-            // 奖惩模板：只有名称和分值
             result.push({ name, points });
           } else {
-            // 任务模板：需要解析类型
             let type: 'homework' | 'practice' | 'habit' = 'habit';
             if (typeStr === '作业' || typeStr === 'homework') type = 'homework';
             else if (typeStr === '练习' || typeStr === 'practice') type = 'practice';
-            else type = 'habit';
             result.push({ name, points, type });
           }
         }
       }
     }
-
     return result;
+  };
+
+  // 直接签字确认 - 不需要密码
+  const handleDirectConfirmTask = (task: DailyTask) => {
+    if (!child || !parent) return;
+    
+    // 更新任务状态为已完成
+    updateDailyTaskStatus(task.id, 'completed', {
+      confirmedAt: new Date().toISOString(),
+      confirmedBy: parent.id,
+    });
+    
+    // 积分入账
+    earnPoints(child.id, task.points, task.id, `完成任务: ${task.name}`);
   };
 
   // 添加任务模板
@@ -210,7 +246,21 @@ export function ParentPage() {
     window.location.reload();
   };
 
+  // 日期切换
+  const prevDay = () => {
+    const prev = new Date(currentDate);
+    prev.setDate(prev.getDate() - 1);
+    setCurrentDate(formatDate(prev));
+  };
+  
+  const nextDay = () => {
+    const next = new Date(currentDate);
+    next.setDate(next.getDate() + 1);
+    setCurrentDate(formatDate(next));
+  };
+
   const tabs = [
+    { key: 'today', label: '今日任务' },
     { key: 'sign', label: '签字密码' },
     { key: 'templates', label: '任务模板' },
     { key: 'rewards', label: '奖惩模板' },
@@ -229,9 +279,12 @@ export function ParentPage() {
               <div className="text-xs text-blue-100">{family?.name}</div>
             </div>
           </div>
-          <Button size="sm" variant="ghost" onClick={handleLogout} className="text-white">
-            退出
-          </Button>
+          {childPoints && (
+            <div className="bg-white/20 px-3 py-1 rounded-full">
+              <span className="text-white font-medium">{childPoints.balance}</span>
+              <span className="text-blue-100 text-sm ml-1">分</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -244,6 +297,128 @@ export function ParentPage() {
 
       {/* 内容区域 */}
       <div className="max-w-md mx-auto px-4 py-4">
+        {/* 今日任务 */}
+        {activeTab === 'today' && (
+          <div className="space-y-4">
+            {/* 日期选择 */}
+            <div className="flex items-center justify-between">
+              <Button size="sm" variant="ghost" onClick={prevDay}>◀</Button>
+              <div className="font-medium text-gray-700">{currentDate}</div>
+              <Button size="sm" variant="ghost" onClick={nextDay}>▶</Button>
+            </div>
+            
+            {/* 进度条 */}
+            {todayTasks.length > 0 && (
+              <TaskProgress 
+                completed={progress.completed}
+                total={progress.total}
+                pointsEarned={progress.pointsEarned}
+                totalPoints={progress.totalPoints}
+              />
+            )}
+
+            {/* 待完成任务 */}
+            {pendingTasks.length > 0 && (
+              <Card>
+                <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <Icon name="clock" size={18} />
+                  待完成 ({pendingTasks.length})
+                </h3>
+                <div className="space-y-2">
+                  {pendingTasks.map(task => (
+                    <div key={task.id} className="border rounded-lg p-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">
+                          {task.type === 'homework' ? '📝' : task.type === 'practice' ? '🎨' : '✨'}
+                        </span>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">{task.name}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge color="primary">+{task.points}分</Badge>
+                            <span className="text-sm text-gray-500">{task.timeSlotStart}-{task.timeSlotEnd}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+            
+            {/* 待签字确认 - 核心功能：直接点击确认，不需要密码 */}
+            {submittedTasks.length > 0 && (
+              <Card className="border-yellow-300 bg-yellow-50">
+                <h3 className="font-medium text-yellow-700 mb-3 flex items-center gap-2">
+                  <Icon name="lock" size={18} />
+                  待签字确认 ({submittedTasks.length})
+                </h3>
+                <div className="space-y-2">
+                  {submittedTasks.map(task => (
+                    <div key={task.id} className="border border-yellow-200 rounded-lg p-3 bg-white">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">
+                          {task.type === 'homework' ? '📝' : task.type === 'practice' ? '🎨' : '✨'}
+                        </span>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">{task.name}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge color="primary">+{task.points}分</Badge>
+                            <Badge color="gray">待确认</Badge>
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          className="bg-green-500 hover:bg-green-600 border-none"
+                          onClick={() => handleDirectConfirmTask(task)}
+                        >
+                          ✓ 确认
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-yellow-600 text-sm mt-3 text-center">
+                  点击"确认"即可完成签字，积分立即入账
+                </p>
+              </Card>
+            )}
+            
+            {/* 已完成任务 */}
+            {completedTasks.length > 0 && (
+              <Card>
+                <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <Icon name="check" size={18} />
+                  已完成 ({completedTasks.length})
+                </h3>
+                <div className="space-y-2">
+                  {completedTasks.map(task => (
+                    <div key={task.id} className="border rounded-lg p-3 bg-green-50">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">✅</span>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">{task.name}</div>
+                          <Badge color="success">+{task.points}分</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+            
+            {/* 空状态 */}
+            {todayTasks.length === 0 && (
+              <Card>
+                <div className="text-center py-8">
+                  <Icon name="calendar" size={40} className="text-gray-300 mb-3" />
+                  <p className="text-gray-500">今天还没有任务</p>
+                  <p className="text-gray-400 text-sm mt-1">等孩子添加任务后会显示在这里</p>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
+
         {/* 签字密码 */}
         {activeTab === 'sign' && (
           <div className="space-y-4">
@@ -266,7 +441,7 @@ export function ParentPage() {
               </div>
               
               <p className="text-gray-500 text-sm text-center mb-4">
-                此密码用于确认孩子任务完成，每日随机生成
+                此密码用于孩子端确认任务完成
               </p>
             </Card>
 
@@ -274,8 +449,7 @@ export function ParentPage() {
               <h3 className="font-medium text-blue-700 mb-2">💡 签字密码说明</h3>
               <div className="text-sm text-blue-600 space-y-1">
                 <p>• 签字密码每天自动生成，4位随机字符</p>
-                <p>• 孩子完成任务后需要家长签字确认</p>
-                <p>• 输入正确签字密码后积分才能入账</p>
+                <p>• 在"今日任务"中可直接点击确认，不需要密码</p>
                 <p>• 点击眼睛按钮可以显示/隐藏密码</p>
               </div>
             </Card>
@@ -381,7 +555,7 @@ export function ParentPage() {
               <Card>
                 <h3 className="font-medium text-gray-700 mb-3">📋 剪切板批量导入</h3>
                 <p className="text-gray-500 text-sm mb-3">
-                  格式：名称(分值)(类型)，例如：完成作业(10)(作业)
+                  格式：名称(分值)(类型)
                 </p>
                 <textarea
                   value={taskClipboardText}
@@ -389,11 +563,10 @@ export function ParentPage() {
                     setTaskClipboardText(e.target.value);
                     setTaskImportPreview(parseClipboardText(e.target.value, false));
                   }}
-                  placeholder="每天自己规划自己的学习和生活(5)(习惯)\n完成作业(10)(作业)\n课外阅读(8)(练习)\n..."
+                  placeholder="完成作业(10)(作业)\n晨读(5)(习惯)\n课外阅读(8)(练习)"
                   className="w-full px-3 py-2 border rounded-lg min-h-[120px]"
                 />
 
-                {/* 预览解析结果 */}
                 {taskImportPreview.length > 0 && (
                   <div className="mt-3">
                     <div className="border rounded-lg p-2 bg-gray-50">
@@ -402,15 +575,9 @@ export function ParentPage() {
                       </p>
                       <div className="max-h-[200px] overflow-y-auto">
                         {taskImportPreview.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between py-1 border-b border-gray-200 last:border-0"
-                          >
+                          <div key={idx} className="flex items-center justify-between py-1">
                             <span className="text-gray-700">{item.name}</span>
                             <div className="flex items-center gap-2">
-                              <Badge color={item.type === 'homework' ? 'blue' : item.type === 'practice' ? 'purple' : 'success'}>
-                                {item.type === 'homework' ? '作业' : item.type === 'practice' ? '练习' : '习惯'}
-                              </Badge>
                               <Badge color="primary">+{item.points}分</Badge>
                             </div>
                           </div>
@@ -421,35 +588,12 @@ export function ParentPage() {
                 )}
 
                 <div className="flex gap-2 mt-4">
-                  <Button
-                    onClick={handleTaskClipboardImport}
-                    disabled={taskImportPreview.length === 0}
-                  >
+                  <Button onClick={handleTaskClipboardImport} disabled={taskImportPreview.length === 0}>
                     导入 {taskImportPreview.length > 0 && `(${taskImportPreview.length}个)`}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setShowTaskClipboardImport(false);
-                      setTaskClipboardText('');
-                      setTaskImportPreview([]);
-                    }}
-                  >
+                  <Button variant="ghost" onClick={() => setShowTaskClipboardImport(false)}>
                     取消
                   </Button>
-                </div>
-              </Card>
-            )}
-
-            {/* 剪切板导入说明 */}
-            {!showAddTaskTemplate && !showTaskClipboardImport && taskTemplates.length === 0 && (
-              <Card className="bg-blue-50 border-blue-200">
-                <h3 className="font-medium text-blue-700 mb-2">💡 快速导入提示</h3>
-                <div className="text-sm text-blue-600 space-y-1">
-                  <p>• 点击"剪切板批量导入"从 Excel 快速导入</p>
-                  <p>• 格式：名称(分值)(类型)</p>
-                  <p>• 类型：作业、练习、习惯</p>
-                  <p>• 支持中文括号（）和英文括号()</p>
                 </div>
               </Card>
             )}
@@ -501,12 +645,12 @@ export function ParentPage() {
                     type="text"
                     value={newRewardTemplateName}
                     onChange={(e) => setNewRewardTemplateName(e.target.value)}
-                    placeholder="奖惩名称（如：考试进步）"
+                    placeholder="奖惩名称"
                     className="w-full px-3 py-2 border rounded-lg"
                   />
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
-                      <label className="text-gray-500 text-sm">分值（正数奖励，负数惩罚）</label>
+                      <label className="text-gray-500 text-sm">分值</label>
                       <input
                         type="number"
                         value={newRewardTemplatePoints}
@@ -539,73 +683,42 @@ export function ParentPage() {
             {showRewardClipboardImport && (
               <Card>
                 <h3 className="font-medium text-gray-700 mb-3">📋 剪切板批量导入</h3>
-                <p className="text-gray-500 text-sm mb-3">
-                  格式：名称(分值)，正数为奖励，负数为惩罚
-                </p>
+                <p className="text-gray-500 text-sm mb-3">格式：名称(分值)</p>
                 <textarea
                   value={rewardClipboardText}
                   onChange={(e) => {
                     setRewardClipboardText(e.target.value);
                     setRewardImportPreview(parseClipboardText(e.target.value, true));
                   }}
-                  placeholder="考试进步(20)\n主动帮助家务(10)\n迟到(-5)\n未按时完成作业(-10)\n..."
+                  placeholder="考试进步(20)\n迟到(-5)"
                   className="w-full px-3 py-2 border rounded-lg min-h-[120px]"
                 />
 
-                {/* 预览解析结果 */}
                 {rewardImportPreview.length > 0 && (
                   <div className="mt-3">
                     <div className="border rounded-lg p-2 bg-gray-50">
                       <p className="text-gray-500 text-sm mb-2">
-                        预览（{rewardImportPreview.length} 个奖惩）：
+                        预览（{rewardImportPreview.length} 个）：
                       </p>
-                      <div className="max-h-[200px] overflow-y-auto">
-                        {rewardImportPreview.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between py-1 border-b border-gray-200 last:border-0"
-                          >
-                            <span className="text-gray-700">{item.name}</span>
-                            <Badge color={item.points > 0 ? 'success' : 'danger'}>
-                              {item.points > 0 ? `+${item.points}` : item.points}分
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
+                      {rewardImportPreview.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-1">
+                          <span className="text-gray-700">{item.name}</span>
+                          <Badge color={item.points > 0 ? 'success' : 'danger'}>
+                            {item.points > 0 ? `+${item.points}` : item.points}分
+                          </Badge>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
                 <div className="flex gap-2 mt-4">
-                  <Button
-                    onClick={handleRewardClipboardImport}
-                    disabled={rewardImportPreview.length === 0}
-                  >
-                    导入 {rewardImportPreview.length > 0 && `(${rewardImportPreview.length}个)`}
+                  <Button onClick={handleRewardClipboardImport} disabled={rewardImportPreview.length === 0}>
+                    导入
                   </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setShowRewardClipboardImport(false);
-                      setRewardClipboardText('');
-                      setRewardImportPreview([]);
-                    }}
-                  >
+                  <Button variant="ghost" onClick={() => setShowRewardClipboardImport(false)}>
                     取消
                   </Button>
-                </div>
-              </Card>
-            )}
-
-            {/* 剪切板导入说明 */}
-            {!showAddRewardTemplate && !showRewardClipboardImport && rewardTemplates.length === 0 && (
-              <Card className="bg-blue-50 border-blue-200">
-                <h3 className="font-medium text-blue-700 mb-2">💡 快速导入提示</h3>
-                <div className="text-sm text-blue-600 space-y-1">
-                  <p>• 点击"剪切板批量导入"从 Excel 快速导入</p>
-                  <p>• 格式：名称(分值)</p>
-                  <p>• 正数为奖励，负数为惩罚</p>
-                  <p>• 支持中文括号（）和英文括号()</p>
                 </div>
               </Card>
             )}
@@ -632,19 +745,6 @@ export function ParentPage() {
                       className="w-full px-3 py-2 border rounded-lg"
                     />
                     <span className="text-gray-500">分</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-gray-500 text-sm">确认超时</label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <input
-                      type="number"
-                      value={pointsConfig.confirmTimeout}
-                      onChange={(e) => setPointsConfig(prev => ({ ...prev, confirmTimeout: parseInt(e.target.value) || 2 }))}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    />
-                    <span className="text-gray-500">小时</span>
                   </div>
                 </div>
               </div>

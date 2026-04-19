@@ -40,8 +40,13 @@ export function HomePage() {
   const family = useFamilyStore(state => state.family);
   const users = useFamilyStore(state => state.users);
   const currentUser = useFamilyStore(state => state.currentUser);
-  const templates = useTemplateStore(state => state.taskTemplates);
+  const allTemplates = useTemplateStore(state => state.taskTemplates);
   const rewardTemplates = useTemplateStore(state => state.rewardTemplates);
+  
+  // 按当前家庭过滤模板
+  const templates = useMemo(() => {
+    return allTemplates.filter(t => t.familyId === family?.id);
+  }, [allTemplates, family?.id]);
   const dailyTasks = useTaskStore(state => state.dailyTasks);
   const getDailyTasksByDate = useTaskStore(state => state.getDailyTasksByDate);
   const addDailyTask = useTaskStore(state => state.addDailyTask);
