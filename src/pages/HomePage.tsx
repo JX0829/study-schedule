@@ -92,13 +92,17 @@ export function HomePage() {
   // 计算进度
   const progress = useMemo(() => {
     const completed = todayTasks.filter(t => t.status === 'completed').length;
+    // 已完成任务积分（包含正负）
     const pointsEarned = todayTasks
       .filter(t => t.status === 'completed')
       .reduce((sum, t) => sum + t.points, 0);
+    // 待完成任务积分（包含正负）
     const pendingPoints = todayTasks
       .filter(t => t.status === 'pending' || t.status === 'submitted')
       .reduce((sum, t) => sum + t.points, 0);
-    return { completed, total: todayTasks.length, pointsEarned, totalPoints: pointsEarned + pendingPoints };
+    // 总分 = 已完成 + 待完成（包含正负积分累加）
+    const totalPoints = pointsEarned + pendingPoints;
+    return { completed, total: todayTasks.length, pointsEarned, totalPoints };
   }, [todayTasks]);
   
   // 获取积分
@@ -497,14 +501,16 @@ export function HomePage() {
                 <button
                   key={template.id}
                   onClick={() => handleSelectTemplate(template.id)}
-                  className="border rounded-lg p-3 text-left hover:bg-primary-50 hover:border-primary-300 transition-colors"
+                  className={`border rounded-lg p-3 text-left hover:bg-primary-50 hover:border-primary-300 transition-colors ${template.points < 0 ? 'border-red-200 bg-red-50' : ''}`}
                 >
                   <div className="font-medium text-gray-800">{template.name}</div>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge color={template.type === 'homework' ? 'blue' : template.type === 'practice' ? 'purple' : 'success'} size="sm">
                       {template.type === 'homework' ? '作业' : template.type === 'practice' ? '练习' : '习惯'}
                     </Badge>
-                    <Badge color="primary" size="sm">+{template.points}分</Badge>
+                    <Badge color={template.points < 0 ? 'danger' : 'primary'} size="sm">
+                      {template.points > 0 ? '+' : ''}{template.points}分
+                    </Badge>
                   </div>
                 </button>
               ))}
