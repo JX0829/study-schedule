@@ -105,6 +105,12 @@ export function ParentPage() {
   const [newPrizeName, setNewPrizeName] = useState('');
   const [newPrizePoints, setNewPrizePoints] = useState('');
   const [newPrizeProbability, setNewPrizeProbability] = useState('');
+  
+  // 奖品编辑
+  const [editingPrize, setEditingPrize] = useState<{id: string; name: string; points: number; probability: number} | null>(null);
+  const [editPrizeName, setEditPrizeName] = useState('');
+  const [editPrizePoints, setEditPrizePoints] = useState('');
+  const [editPrizeProbability, setEditPrizeProbability] = useState('');
 
   // 加载奖品配置
   useEffect(() => {
@@ -149,6 +155,19 @@ export function ParentPage() {
     const updated = prizes.filter(p => p.id !== id);
     setPrizes(updated);
     localStorage.setItem('prizes', JSON.stringify(updated));
+  };
+
+  // 编辑奖品
+  const handleUpdatePrize = () => {
+    if (!editingPrize || !editPrizeName || !editPrizePoints || !editPrizeProbability) return;
+    const updated = prizes.map(p => 
+      p.id === editingPrize.id 
+        ? { ...p, name: editPrizeName, points: parseInt(editPrizePoints), probability: parseInt(editPrizeProbability) }
+        : p
+    );
+    setPrizes(updated);
+    localStorage.setItem('prizes', JSON.stringify(updated));
+    setEditingPrize(null);
   };
 
   const parent = users.find(u => u.role === 'parent');
@@ -1146,9 +1165,19 @@ export function ParentPage() {
                         <Badge color="primary">{prize.probability}%</Badge>
                       </div>
                     </div>
-                    <Button size="sm" variant="danger" onClick={() => handleDeletePrize(prize.id)}>
-                      删除
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => {
+                        setEditingPrize(prize);
+                        setEditPrizeName(prize.name);
+                        setEditPrizePoints(String(prize.points));
+                        setEditPrizeProbability(String(prize.probability));
+                      }}>
+                        ✏️
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDeletePrize(prize.id)}>
+                        删除
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1203,6 +1232,48 @@ export function ParentPage() {
               </Card>
             ) : (
               <Button className="w-full" onClick={() => setShowAddPrize(true)}>+ 添加奖品</Button>
+            )}
+
+            {/* 奖品编辑弹窗 */}
+            {editingPrize && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-sm w-full p-4">
+                  <h3 className="font-medium text-gray-700 mb-4">✏️ 修改奖品</h3>
+                  <div className="space-y-3 mb-4">
+                    <input
+                      type="text"
+                      value={editPrizeName}
+                      onChange={(e) => setEditPrizeName(e.target.value)}
+                      placeholder="奖品名称"
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="text-gray-500 text-sm">积分</label>
+                        <input
+                          type="number"
+                          value={editPrizePoints}
+                          onChange={(e) => setEditPrizePoints(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg mt-1"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-gray-500 text-sm">概率%</label>
+                        <input
+                          type="number"
+                          value={editPrizeProbability}
+                          onChange={(e) => setEditPrizeProbability(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button className="flex-1" onClick={handleUpdatePrize}>保存</Button>
+                    <Button variant="secondary" className="flex-1" onClick={() => setEditingPrize(null)}>取消</Button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}

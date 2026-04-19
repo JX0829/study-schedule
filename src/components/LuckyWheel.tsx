@@ -2,8 +2,8 @@
  * 抽奖转盘组件
  */
 
-import { useState, useEffect } from 'react';
-import { Card, Button, Badge, Icon } from '@/components';
+import { useState, useEffect, useRef } from 'react';
+import { Card, Button, Badge } from '@/components';
 import { usePointsStore, useFamilyStore } from '@/store';
 
 interface Prize {
@@ -21,23 +21,103 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
   const [prizes, setPrizes] = useState<Prize[]>([]);
   const [isSpinning, setIsSpinning] = useState(false);
   const [result, setResult] = useState<Prize | null>(null);
-  const [rotation, setRotation] = useState(0);
   const [canSpin, setCanSpin] = useState(true);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [rotation, setRotation] = useState(0);
+  const targetRotationRef = useRef(0);
+  const animationRef = useRef<number>(0);
+  
   const earnPoints = usePointsStore(state => state.earnPoints);
   const getChildPoints = usePointsStore(state => state.getChildPoints);
   const users = useFamilyStore(state => state.users);
   
-  // 获取孩子信息
   const child = users.find(u => u.role === 'child');
   const childPointData = child ? getChildPoints(child.id) : null;
 
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+
+  // 绘制转盘
+  const drawWheel = (currentRotation: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 2 - 10;
+    const anglePerPrize = (2 * Math.PI) / prizes.length;
+    
+    // 清空画布
+    ctx.clearRect(0, 0, width, height);
+    
+    // 绘制扇区
+    prizes.forEach((prize, index) => {
+      const startAngle = currentRotation + index * anglePerPrize;
+      const endAngle = startAngle + anglePerPrize;
+      
+      // 扇区
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fillStyle = colors[index % colors.length];
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // 文字
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(startAngle + anglePerPrize / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText(prize.name, radius - 20, 5);
+      ctx.restore();
+    });
+    
+    // 中心圆
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#4ECDC4';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  };
+
+  // 动画循环
+  const animate = (target: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const current = rotation;
+    const diff = target - current;
+    
+    if (Math.abs(diff) < 0.5) {
+      setRotation(target);
+      drawWheel(target);
+      return;
+    }
+    
+    // 缓动动画
+    const eased = current + diff * 0.1;
+    setRotation(eased);
+    drawWheel(eased);
+    animationRef.current = requestAnimationFrame(() => animate(target));
+  };
+
   useEffect(() => {
-    // 从 localStorage 加载奖品配置
+    // 加载奖品配置
     const savedPrizes = localStorage.getItem('prizes');
     if (savedPrizes) {
       setPrizes(JSON.parse(savedPrizes));
     } else {
-      // 默认奖品
       const defaultPrizes = [
         { id: '1', name: '再来一次', points: 0, probability: 30 },
         { id: '2', name: '5积分', points: 5, probability: 25 },
@@ -58,6 +138,12 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
     }
   }, []);
 
+  useEffect(() => {
+    if (prizes.length > 0) {
+      drawWheel(rotation);
+    }
+  }, [prizes, rotation]);
+
   const handleSpin = () => {
     if (isSpinning || !canSpin || prizes.length === 0) return;
 
@@ -77,13 +163,17 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
     setIsSpinning(true);
     setResult(null);
 
-    // 计算旋转角度（多转几圈 + 随机偏移）
+    // 计算目标角度 - 让指针指向奖品的中心
     const prizeIndex = prizes.findIndex(p => p.id === selectedPrize.id);
     const anglePerPrize = 360 / prizes.length;
-    const targetAngle = 360 * 5 + (prizeIndex * anglePerPrize) + anglePerPrize / 2;
-    const newRotation = rotation + targetAngle + Math.random() * 30;
     
-    setRotation(newRotation);
+    // 目标：让奖品的中心转到12点钟方向（-90度）
+    // 需要旋转：360 * 5圈 + 奖品的中心角度 - 当前的旋转角度
+    const targetAngle = rotation + 360 * 5 + (360 - prizeIndex * anglePerPrize - anglePerPrize / 2);
+    targetRotationRef.current = targetAngle;
+    
+    // 启动动画
+    animationRef.current = requestAnimationFrame(() => animate(targetAngle));
 
     // 动画结束后显示结果
     setTimeout(() => {
@@ -103,8 +193,14 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
     }, 4000);
   };
 
-  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
-  const anglePerPrize = 360 / prizes.length;
+  // 清理动画
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -120,50 +216,25 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
       <Card>
         <div className="relative w-72 h-72 mx-auto mb-4">
           {/* 指针 */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-10">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-30" style={{ zIndex: 30 }}>
             <div className="w-0 h-0 border-l-8 border-r-8 border-t-16 border-transparent border-t-primary-600"></div>
           </div>
           
-          {/* 转盘主体 */}
-          <div 
-            className="w-full h-full rounded-full border-4 border-primary-600 overflow-hidden"
-            style={{ 
-              transform: `rotate(${rotation}deg)`,
-              transition: isSpinning ? 'transform 4s ease-out' : 'none'
-            }}
-          >
-            {prizes.map((prize, index) => {
-              const startAngle = index * anglePerPrize;
-              const midAngle = startAngle + anglePerPrize / 2;
-              
-              return (
-                <div
-                  key={prize.id}
-                  className="absolute w-full h-full"
-                  style={{
-                    transform: `rotate(${startAngle}deg)`,
-                    clipPath: `polygon(50% 50%, 50% 0%, 50% ${100 / prizes.length * (prizes.length - index)}%)`,
-                    background: colors[index % colors.length],
-                  }}
-                >
-                  <div 
-                    className="absolute top-8 left-1/2 -translate-x-1/2 text-white font-bold text-sm whitespace-nowrap"
-                    style={{ transform: `rotate(${anglePerPrize / 2}deg)` }}
-                  >
-                    {prize.name}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {/* 转盘 Canvas */}
+          <canvas
+            ref={canvasRef}
+            width={280}
+            height={280}
+            className="w-full h-full rounded-full"
+          />
           
           {/* 中心按钮 */}
           <button
             onClick={handleSpin}
             disabled={isSpinning || !canSpin}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-white border-4 border-primary-600 flex items-center justify-center text-primary-600 font-bold text-sm shadow-lg disabled:opacity-50 disabled:cursor-not-allowed z-20"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-white border-4 border-primary-600 flex items-center justify-center text-primary-600 font-bold text-xs shadow-lg disabled:opacity-50 disabled:cursor-not-allowed z-20"
           >
-            {isSpinning ? '...' : canSpin ? '抽奖' : '明天再来'}
+            {isSpinning ? '...' : canSpin ? '抽奖' : '明天'}
           </button>
         </div>
 
