@@ -111,7 +111,10 @@ export function HomePage() {
   }, [todayTasks]);
   
   // 获取积分
-  const childPoints = child ? getChildPoints(child.id) : null;
+  const childPoints = useMemo(() => {
+    if (!child) return null;
+    return getChildPoints(child.id);
+  }, [child, getChildPoints]);
   
   // 日期切换
   const prevDay = () => {
@@ -429,33 +432,31 @@ export function HomePage() {
           <Card className="mb-4">
             <div className="text-center py-4">
               <div className="text-4xl mb-2">⭐</div>
-              {(() => {
-                const points = childPoints || (child ? getChildPoints(child.id) : null);
-                if (!points) return <div className="text-gray-400">暂无积分数据</div>;
-                return (
-                  <>
-                    <div className="text-3xl font-bold text-primary-600">
-                      {points.balance}
+              {childPoints ? (
+                <>
+                  <div className="text-3xl font-bold text-primary-600">
+                    {childPoints.balance}
+                  </div>
+                  <div className="text-gray-500 text-sm mt-1">
+                    可用积分
+                    {childPoints.locked > 0 && (
+                      <span className="text-gray-400 ml-2">({childPoints.locked} 已锁定)</span>
+                    )}
+                  </div>
+                  <div className="flex justify-center gap-4 mt-4 text-sm">
+                    <div>
+                      <span className="text-green-500">累计获得</span>
+                      <span className="font-medium ml-1">{childPoints.totalEarned}</span>
                     </div>
-                    <div className="text-gray-500 text-sm mt-1">
-                      可用积分
-                      {points.locked > 0 && (
-                        <span className="text-gray-400 ml-2">({points.locked} 已锁定)</span>
-                      )}
+                    <div>
+                      <span className="text-red-500">累计兑换</span>
+                      <span className="font-medium ml-1">{childPoints.totalRedeemed}</span>
                     </div>
-                    <div className="flex justify-center gap-4 mt-4 text-sm">
-                      <div>
-                        <span className="text-green-500">累计获得</span>
-                        <span className="font-medium ml-1">{points.totalEarned}</span>
-                      </div>
-                      <div>
-                        <span className="text-red-500">累计兑换</span>
-                        <span className="font-medium ml-1">{points.totalRedeemed}</span>
-                      </div>
-                    </div>
-                  </>
-                );
-              })()}
+                  </div>
+                </>
+              ) : (
+                <div className="text-gray-400">暂无积分数据</div>
+              )}
             </div>
           </Card>
           
