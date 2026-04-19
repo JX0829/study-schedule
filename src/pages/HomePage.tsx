@@ -509,7 +509,7 @@ export function HomePage() {
                       {template.type === 'homework' ? '作业' : template.type === 'practice' ? '练习' : '习惯'}
                     </Badge>
                     <Badge color={template.points < 0 ? 'danger' : 'primary'} size="sm">
-                      {template.points > 0 ? '+' : ''}{template.points}分
+                      {template.points}分
                     </Badge>
                   </div>
                 </button>
