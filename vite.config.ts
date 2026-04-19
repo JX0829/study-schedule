@@ -11,6 +11,7 @@ export default defineConfig({
   server: {
     port: 3333,
     host: true,
+    allowedHosts: ['sp.1231506.xyz'],
   },
   resolve: {
     alias: {
