@@ -75,6 +75,10 @@ export function HomePage() {
   const [selectedRewards, setSelectedRewards] = useState<string[]>([]);
   const [selectedPenalties, setSelectedPenalties] = useState<string[]>([]);
   
+  // 编辑已完成任务
+  const [editingTask, setEditingTask] = useState<DailyTask | null>(null);
+  const [editTaskPoints, setEditTaskPoints] = useState('');
+  
   // 获取孩子用户
   const child = users.find(u => u.role === 'child');
   const parent = users.find(u => u.role === 'parent');
@@ -334,10 +338,65 @@ export function HomePage() {
                           <div className="font-medium text-gray-800">{task.name}</div>
                           <Badge color={task.points < 0 ? 'danger' : 'success'}>{task.points}分</Badge>
                         </div>
+                        <div className="flex gap-1">
+                          <button 
+                            onClick={() => {
+                              setEditingTask(task);
+                              setEditTaskPoints(String(task.points));
+                            }}
+                            className="p-1.5 text-gray-500 hover:text-gray-700"
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            onClick={() => {
+                              // 删除：改回待完成状态，积分会从已完成中移除
+                              updateDailyTaskStatus(task.id, 'pending');
+                            }}
+                            className="p-1.5 text-gray-500 hover:text-red-600"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
+
+                {/* 编辑任务弹窗 */}
+                {editingTask && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-sm w-full p-4">
+                      <h3 className="font-medium text-gray-700 mb-4">修改任务积分</h3>
+                      <div className="mb-4">
+                        <div className="font-medium mb-2">{editingTask.name}</div>
+                        <input
+                          type="number"
+                          value={editTaskPoints}
+                          onChange={(e) => setEditTaskPoints(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          className="flex-1"
+                          onClick={() => {
+                            const newPoints = parseInt(editTaskPoints);
+                            if (!isNaN(newPoints)) {
+                              updateDailyTaskStatus(editingTask.id, 'completed', { points: newPoints });
+                            }
+                            setEditingTask(null);
+                          }}
+                        >
+                          保存
+                        </Button>
+                        <Button variant="secondary" className="flex-1" onClick={() => setEditingTask(null)}>
+                          取消
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </Card>
             )}
             

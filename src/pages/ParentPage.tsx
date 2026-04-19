@@ -80,6 +80,11 @@ export function ParentPage() {
   const [bonusTemplateId, setBonusTemplateId] = useState('');
   const [bonusDescription, setBonusDescription] = useState('');
 
+  // 编辑任务
+  const [editingTask, setEditingTask] = useState<DailyTask | null>(null);
+  const [editTaskPoints, setEditTaskPoints] = useState('');
+  const [deleteConfirmTask, setDeleteConfirmTask] = useState<DailyTask | null>(null);
+
   const parent = users.find(u => u.role === 'parent');
   const child = users.find(u => u.role === 'child');
 
@@ -365,9 +370,26 @@ export function ParentPage() {
                         <div className="flex-1">
                           <div className="font-medium text-gray-800">{task.name}</div>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge color="primary">+{task.points}分</Badge>
+                            <Badge color={task.points < 0 ? 'danger' : 'primary'}>{task.points}分</Badge>
                             <span className="text-sm text-gray-500">{task.timeSlotStart}-{task.timeSlotEnd}</span>
                           </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <button 
+                            onClick={() => {
+                              setEditingTask(task);
+                              setEditTaskPoints(String(task.points));
+                            }}
+                            className="p-1.5 text-gray-500 hover:text-gray-700"
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            onClick={() => setDeleteConfirmTask(task)}
+                            className="p-1.5 text-gray-500 hover:text-red-600"
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -428,7 +450,24 @@ export function ParentPage() {
                         <span className="text-xl">✅</span>
                         <div className="flex-1">
                           <div className="font-medium text-gray-800">{task.name}</div>
-                          <Badge color="success">+{task.points}分</Badge>
+                          <Badge color={task.points < 0 ? 'danger' : 'success'}>{task.points}分</Badge>
+                        </div>
+                        <div className="flex gap-1">
+                          <button 
+                            onClick={() => {
+                              setEditingTask(task);
+                              setEditTaskPoints(String(task.points));
+                            }}
+                            className="p-1.5 text-gray-500 hover:text-gray-700"
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            onClick={() => setDeleteConfirmTask(task)}
+                            className="p-1.5 text-gray-500 hover:text-red-600"
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -532,6 +571,68 @@ export function ParentPage() {
                         setBonusType('reward');
                       }}
                     >
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 编辑任务弹窗 */}
+            {editingTask && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-sm w-full p-4">
+                  <h3 className="font-medium text-gray-700 mb-4">✏️ 修改任务积分</h3>
+                  <div className="mb-4">
+                    <div className="font-medium mb-2">{editingTask.name}</div>
+                    <input
+                      type="number"
+                      value={editTaskPoints}
+                      onChange={(e) => setEditTaskPoints(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1"
+                      onClick={() => {
+                        const newPoints = parseInt(editTaskPoints);
+                        if (!isNaN(newPoints)) {
+                          updateDailyTaskStatus(editingTask.id, editingTask.status, { points: newPoints });
+                        }
+                        setEditingTask(null);
+                      }}
+                    >
+                      保存
+                    </Button>
+                    <Button variant="secondary" className="flex-1" onClick={() => setEditingTask(null)}>
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 删除确认弹窗 */}
+            {deleteConfirmTask && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-sm w-full p-4">
+                  <h3 className="font-medium text-gray-700 mb-4">🗑️ 确认删除</h3>
+                  <p className="text-gray-500 mb-4">
+                    确定要删除任务 "{deleteConfirmTask.name}" 吗？
+                  </p>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="danger"
+                      className="flex-1"
+                      onClick={() => {
+                        updateDailyTaskStatus(deleteConfirmTask.id, 'pending');
+                        setDeleteConfirmTask(null);
+                      }}
+                    >
+                      删除
+                    </Button>
+                    <Button variant="secondary" className="flex-1" onClick={() => setDeleteConfirmTask(null)}>
                       取消
                     </Button>
                   </div>
