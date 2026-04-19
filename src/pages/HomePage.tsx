@@ -6,6 +6,7 @@ import { useState, useMemo } from 'react';
 import { Page, Card, Button, TaskProgress, DateHeader, TabBar, Badge, PointsBadge, Icon, Modal } from '@/components';
 import { TimePicker } from '@/components/ui/TimePicker';
 import { SignPasswordInput } from '@/components/sign';
+import { LuckyWheel } from '@/components/LuckyWheel';
 import { useTaskStore, usePointsStore, useFamilyStore, useTemplateStore } from '@/store';
 import { getToday, formatDate } from '@/utils/date';
 import type { DailyTask } from '@/types';
@@ -474,30 +475,7 @@ export function HomePage() {
       {/* 奖励内容 */}
       {activeTab === 'rewards' && (
         <div className="max-w-md mx-auto px-4 py-4">
-          <Card>
-            <h3 className="font-medium text-gray-700 mb-3">可兑换奖励</h3>
-            
-            {rewardTemplates.length > 0 ? (
-              <div className="space-y-2">
-                {rewardTemplates.filter(r => r.points > 0).map(template => (
-                  <div key={template.id} className="border rounded-lg p-3 flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{template.name}</div>
-                      <Badge color="success">+{template.points}分</Badge>
-                    </div>
-                    {childPoints && childPoints.balance >= template.points && (
-                      <Button size="sm">兑换</Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Icon name="gift" size={40} className="text-gray-300 mb-3" />
-                <p className="text-gray-500">家长还没有设置奖励模板</p>
-              </div>
-            )}
-          </Card>
+          <LuckyWheel />
         </div>
       )}
 

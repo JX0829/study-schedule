@@ -99,6 +99,58 @@ export function ParentPage() {
   const [editTaskPoints, setEditTaskPoints] = useState('');
   const [deleteConfirmTask, setDeleteConfirmTask] = useState<DailyTask | null>(null);
 
+  // 奖品配置
+  const [prizes, setPrizes] = useState<Array<{id: string; name: string; points: number; probability: number}>>([]);
+  const [showAddPrize, setShowAddPrize] = useState(false);
+  const [newPrizeName, setNewPrizeName] = useState('');
+  const [newPrizePoints, setNewPrizePoints] = useState('');
+  const [newPrizeProbability, setNewPrizeProbability] = useState('');
+
+  // 加载奖品配置
+  useEffect(() => {
+    const savedPrizes = localStorage.getItem('prizes');
+    if (savedPrizes) {
+      setPrizes(JSON.parse(savedPrizes));
+    } else {
+      // 默认奖品
+      const defaultPrizes = [
+        { id: '1', name: '再来一次', points: 0, probability: 30 },
+        { id: '2', name: '5积分', points: 5, probability: 25 },
+        { id: '3', name: '10积分', points: 10, probability: 20 },
+        { id: '4', name: '20积分', points: 20, probability: 15 },
+        { id: '5', name: '50积分', points: 50, probability: 8 },
+        { id: '6', name: '100积分', points: 100, probability: 2 },
+      ];
+      setPrizes(defaultPrizes);
+      localStorage.setItem('prizes', JSON.stringify(defaultPrizes));
+    }
+  }, []);
+
+  // 添加奖品
+  const handleAddPrize = () => {
+    if (!newPrizeName || !newPrizePoints || !newPrizeProbability) return;
+    const newPrize = {
+      id: Date.now().toString(),
+      name: newPrizeName,
+      points: parseInt(newPrizePoints),
+      probability: parseInt(newPrizeProbability),
+    };
+    const updated = [...prizes, newPrize];
+    setPrizes(updated);
+    localStorage.setItem('prizes', JSON.stringify(updated));
+    setNewPrizeName('');
+    setNewPrizePoints('');
+    setNewPrizeProbability('');
+    setShowAddPrize(false);
+  };
+
+  // 删除奖品
+  const handleDeletePrize = (id: string) => {
+    const updated = prizes.filter(p => p.id !== id);
+    setPrizes(updated);
+    localStorage.setItem('prizes', JSON.stringify(updated));
+  };
+
   const parent = users.find(u => u.role === 'parent');
   const child = users.find(u => u.role === 'child');
 
@@ -305,6 +357,7 @@ export function ParentPage() {
     { key: 'sign', label: '签字密码' },
     { key: 'templates', label: '任务模板' },
     { key: 'rewards', label: '奖惩模板' },
+    { key: 'prizes', label: '奖品配置' },
     { key: 'config', label: '配置' },
   ];
 
@@ -1065,6 +1118,91 @@ export function ParentPage() {
                   </div>
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* 奖品配置 */}
+        {activeTab === 'prizes' && (
+          <div className="space-y-4">
+            <Card>
+              <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <Icon name="gift" size={20} />
+                抽奖奖品配置
+              </h3>
+              <p className="text-gray-500 text-sm mb-4">
+                配置抽奖大转盘的奖品，中奖概率总和应为100%
+              </p>
+              
+              <div className="space-y-2 mb-4">
+                {prizes.map(prize => (
+                  <div key={prize.id} className="border rounded-lg p-3 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{prize.name}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge color={prize.points > 0 ? 'success' : 'gray'}>
+                          {prize.points > 0 ? `+${prize.points}分` : prize.points === 0 ? '再来一次' : `${prize.points}分`}
+                        </Badge>
+                        <Badge color="primary">{prize.probability}%</Badge>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="danger" onClick={() => handleDeletePrize(prize.id)}>
+                      删除
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">概率总和: {prizes.reduce((sum, p) => sum + p.probability, 0)}%</span>
+                {prizes.reduce((sum, p) => sum + p.probability, 0) !== 100 && (
+                  <Badge color="danger">应为100%</Badge>
+                )}
+              </div>
+            </Card>
+
+            {/* 添加奖品 */}
+            {showAddPrize ? (
+              <Card>
+                <h3 className="font-medium text-gray-700 mb-3">添加奖品</h3>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={newPrizeName}
+                    onChange={(e) => setNewPrizeName(e.target.value)}
+                    placeholder="奖品名称（如：10积分）"
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-gray-500 text-sm">积分</label>
+                      <input
+                        type="number"
+                        value={newPrizePoints}
+                        onChange={(e) => setNewPrizePoints(e.target.value)}
+                        placeholder="10"
+                        className="w-full px-3 py-2 border rounded-lg mt-1"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-gray-500 text-sm">概率%</label>
+                      <input
+                        type="number"
+                        value={newPrizeProbability}
+                        onChange={(e) => setNewPrizeProbability(e.target.value)}
+                        placeholder="20"
+                        className="w-full px-3 py-2 border rounded-lg mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleAddPrize}>添加</Button>
+                    <Button variant="secondary" onClick={() => setShowAddPrize(false)}>取消</Button>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <Button className="w-full" onClick={() => setShowAddPrize(true)}>+ 添加奖品</Button>
             )}
           </div>
         )}

@@ -1,0 +1,210 @@
+/**
+ * 抽奖转盘组件
+ */
+
+import { useState, useEffect } from 'react';
+import { Card, Button, Badge, Icon } from '@/components';
+import { usePointsStore, useFamilyStore } from '@/store';
+
+interface Prize {
+  id: string;
+  name: string;
+  points: number;
+  probability: number;
+}
+
+interface LuckyWheelProps {
+  onSpinComplete?: (prize: Prize) => void;
+}
+
+export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
+  const [prizes, setPrizes] = useState<Prize[]>([]);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [result, setResult] = useState<Prize | null>(null);
+  const [rotation, setRotation] = useState(0);
+  const [canSpin, setCanSpin] = useState(true);
+  const earnPoints = usePointsStore(state => state.earnPoints);
+  const getChildPoints = usePointsStore(state => state.getChildPoints);
+  const users = useFamilyStore(state => state.users);
+  
+  // 获取孩子信息
+  const child = users.find(u => u.role === 'child');
+  const childPointData = child ? getChildPoints(child.id) : null;
+
+  useEffect(() => {
+    // 从 localStorage 加载奖品配置
+    const savedPrizes = localStorage.getItem('prizes');
+    if (savedPrizes) {
+      setPrizes(JSON.parse(savedPrizes));
+    } else {
+      // 默认奖品
+      const defaultPrizes = [
+        { id: '1', name: '再来一次', points: 0, probability: 30 },
+        { id: '2', name: '5积分', points: 5, probability: 25 },
+        { id: '3', name: '10积分', points: 10, probability: 20 },
+        { id: '4', name: '20积分', points: 20, probability: 15 },
+        { id: '5', name: '50积分', points: 50, probability: 8 },
+        { id: '6', name: '100积分', points: 100, probability: 2 },
+      ];
+      setPrizes(defaultPrizes);
+      localStorage.setItem('prizes', JSON.stringify(defaultPrizes));
+    }
+    
+    // 检查今天是否已抽奖
+    const today = new Date().toDateString();
+    const lastSpinDate = localStorage.getItem('lastSpinDate');
+    if (lastSpinDate === today) {
+      setCanSpin(false);
+    }
+  }, []);
+
+  const handleSpin = () => {
+    if (isSpinning || !canSpin || prizes.length === 0) return;
+
+    // 根据概率随机选择奖品
+    const random = Math.random() * 100;
+    let cumulative = 0;
+    let selectedPrize = prizes[0];
+    
+    for (const prize of prizes) {
+      cumulative += prize.probability;
+      if (random <= cumulative) {
+        selectedPrize = prize;
+        break;
+      }
+    }
+
+    setIsSpinning(true);
+    setResult(null);
+
+    // 计算旋转角度（多转几圈 + 随机偏移）
+    const prizeIndex = prizes.findIndex(p => p.id === selectedPrize.id);
+    const anglePerPrize = 360 / prizes.length;
+    const targetAngle = 360 * 5 + (prizeIndex * anglePerPrize) + anglePerPrize / 2;
+    const newRotation = rotation + targetAngle + Math.random() * 30;
+    
+    setRotation(newRotation);
+
+    // 动画结束后显示结果
+    setTimeout(() => {
+      setIsSpinning(false);
+      setResult(selectedPrize);
+      
+      // 记录今天已抽奖
+      localStorage.setItem('lastSpinDate', new Date().toDateString());
+      setCanSpin(false);
+      
+      // 发放积分
+      if (child && selectedPrize.points > 0) {
+        earnPoints(child.id, selectedPrize.points, '', `抽奖奖励: ${selectedPrize.name}`);
+      }
+      
+      onSpinComplete?.(selectedPrize);
+    }, 4000);
+  };
+
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
+  const anglePerPrize = 360 / prizes.length;
+
+  return (
+    <div className="space-y-4">
+      {/* 当前积分显示 */}
+      <Card className="bg-gradient-to-r from-primary-500 to-primary-600 text-white">
+        <div className="text-center py-4">
+          <div className="text-4xl font-bold">{childPointData?.balance || 0}</div>
+          <div className="text-primary-100">当前积分</div>
+        </div>
+      </Card>
+
+      {/* 转盘 */}
+      <Card>
+        <div className="relative w-72 h-72 mx-auto mb-4">
+          {/* 指针 */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-10">
+            <div className="w-0 h-0 border-l-8 border-r-8 border-t-16 border-transparent border-t-primary-600"></div>
+          </div>
+          
+          {/* 转盘主体 */}
+          <div 
+            className="w-full h-full rounded-full border-4 border-primary-600 overflow-hidden"
+            style={{ 
+              transform: `rotate(${rotation}deg)`,
+              transition: isSpinning ? 'transform 4s ease-out' : 'none'
+            }}
+          >
+            {prizes.map((prize, index) => {
+              const startAngle = index * anglePerPrize;
+              const midAngle = startAngle + anglePerPrize / 2;
+              
+              return (
+                <div
+                  key={prize.id}
+                  className="absolute w-full h-full"
+                  style={{
+                    transform: `rotate(${startAngle}deg)`,
+                    clipPath: `polygon(50% 50%, 50% 0%, 50% ${100 / prizes.length * (prizes.length - index)}%)`,
+                    background: colors[index % colors.length],
+                  }}
+                >
+                  <div 
+                    className="absolute top-8 left-1/2 -translate-x-1/2 text-white font-bold text-sm whitespace-nowrap"
+                    style={{ transform: `rotate(${anglePerPrize / 2}deg)` }}
+                  >
+                    {prize.name}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* 中心按钮 */}
+          <button
+            onClick={handleSpin}
+            disabled={isSpinning || !canSpin}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-white border-4 border-primary-600 flex items-center justify-center text-primary-600 font-bold text-sm shadow-lg disabled:opacity-50 disabled:cursor-not-allowed z-20"
+          >
+            {isSpinning ? '...' : canSpin ? '抽奖' : '明天再来'}
+          </button>
+        </div>
+
+        {/* 结果显示 */}
+        {result && (
+          <div className="text-center py-4 bg-green-50 rounded-lg mb-4">
+            <div className="text-2xl mb-2">🎉</div>
+            <div className="text-xl font-bold text-green-600">
+              {result.points > 0 ? `获得 ${result.points} 积分！` : result.name}
+            </div>
+            <div className="text-gray-500 text-sm mt-2">
+              {result.points > 0 ? `积分已发放到账户` : '积分不变，明天再来！'}
+            </div>
+          </div>
+        )}
+
+        {/* 抽奖说明 */}
+        <div className="text-center text-gray-500 text-sm">
+          <p>🎰 每天可以抽奖一次</p>
+          <p>💪 完成任务可获得抽奖机会</p>
+        </div>
+      </Card>
+
+      {/* 奖品列表 */}
+      <Card>
+        <h3 className="font-medium text-gray-700 mb-3">奖品列表</h3>
+        <div className="space-y-2">
+          {prizes.map((prize, index) => (
+            <div key={prize.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+              <div className="flex items-center gap-2">
+                <div 
+                  className="w-3 h-3 rounded-full" 
+                  style={{ background: colors[index % colors.length] }}
+                ></div>
+                <span className="text-gray-700">{prize.name}</span>
+              </div>
+              <Badge color="primary">{prize.probability}%</Badge>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
