@@ -271,14 +271,19 @@ export function HomePage() {
                         <div className="flex-1">
                           <div className="font-medium text-gray-800">{task.name}</div>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge color="primary">+{task.points}分</Badge>
+                            <Badge color={task.points < 0 ? 'danger' : 'primary'}>{task.points}分</Badge>
                             <span className="text-sm text-gray-500">{task.timeSlotStart}-{task.timeSlotEnd}</span>
                           </div>
                         </div>
                       </div>
-                      <Button size="sm" onClick={() => handleMarkComplete(task.id)}>
-                        ✓ 完成
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => updateDailyTaskStatus(task.id, 'pending')}>
+                          🗑️
+                        </Button>
+                        <Button size="sm" onClick={() => handleMarkComplete(task.id)}>
+                          ✓ 完成
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
