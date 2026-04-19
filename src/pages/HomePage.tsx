@@ -247,7 +247,6 @@ export function HomePage() {
               completed={progress.completed}
               total={progress.total}
               pointsEarned={progress.pointsEarned}
-              totalPoints={progress.totalPoints}
             />
           )}
           

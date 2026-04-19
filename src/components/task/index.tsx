@@ -151,7 +151,7 @@ interface TaskProgressProps {
   totalPoints: number;
 }
 
-export function TaskProgress({ completed, total, pointsEarned, totalPoints }: TaskProgressProps) {
+export function TaskProgress({ completed, total, pointsEarned }: TaskProgressProps) {
   return (
     <Card className="mb-4">
       <div className="flex items-center justify-between mb-3">
@@ -161,7 +161,7 @@ export function TaskProgress({ completed, total, pointsEarned, totalPoints }: Ta
         </div>
         <div className="flex items-center gap-1">
           <span className="text-primary-500">⭐</span>
-          <span className="font-bold text-primary-600">{pointsEarned}/{totalPoints}</span>
+          <span className="font-bold text-primary-600">{pointsEarned}</span>
         </div>
       </div>
       <Progress value={completed} max={total} showLabel />
