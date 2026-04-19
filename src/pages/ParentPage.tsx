@@ -24,6 +24,7 @@ export function ParentPage() {
   const dailyTasks = useTaskStore(state => state.dailyTasks);
   const getDailyTasksByDate = useTaskStore(state => state.getDailyTasksByDate);
   const updateDailyTaskStatus = useTaskStore(state => state.updateDailyTaskStatus);
+  const deleteDailyTask = useTaskStore(state => state.deleteDailyTask);
   const rewards = useRewardStore(state => state.rewards);
   const addReward = useRewardStore(state => state.addReward);
   const deleteReward = useRewardStore(state => state.deleteReward);
@@ -626,7 +627,7 @@ export function ParentPage() {
                       variant="danger"
                       className="flex-1"
                       onClick={() => {
-                        updateDailyTaskStatus(deleteConfirmTask.id, 'pending');
+                        deleteDailyTask(deleteConfirmTask.id);
                         setDeleteConfirmTask(null);
                       }}
                     >
