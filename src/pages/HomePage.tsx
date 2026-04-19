@@ -412,7 +412,7 @@ export function HomePage() {
                   <div key={template.id} className="border rounded-lg p-3 flex items-center justify-between">
                     <div>
                       <div className="font-medium">{template.name}</div>
-                      <Badge color="primary">{template.points}分</Badge>
+                      <Badge color="success">+{template.points}分</Badge>
                     </div>
                     {childPoints && childPoints.balance >= template.points && (
                       <Button size="sm">兑换</Button>
