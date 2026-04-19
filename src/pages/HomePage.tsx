@@ -222,12 +222,13 @@ export function HomePage() {
             <span className="text-2xl">👋</span>
             <div>
               <div className="font-medium text-gray-800">{child?.name}</div>
-              <div className="text-xs text-gray-500">今天要加油哦！</div>
+              <div className="text-xs text-gray-500">今天有效积分: {progress.pointsEarned}</div>
             </div>
           </div>
-          {childPoints && (
-            <PointsBadge points={childPoints.balance} locked={childPoints.locked} />
-          )}
+          <div className="text-right">
+            <div className="text-2xl font-bold text-primary-600">{progress.pointsEarned}</div>
+            <div className="text-xs text-gray-400">今日已获得</div>
+          </div>
         </div>
       </div>
 
@@ -342,7 +343,10 @@ export function HomePage() {
                         <span className="text-xl">✅</span>
                         <div className="flex-1">
                           <div className="font-medium text-gray-800">{task.name}</div>
-                          <Badge color={task.points < 0 ? 'danger' : 'success'}>{task.points}分</Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge color={task.points < 0 ? 'danger' : 'success'}>{task.points}分</Badge>
+                            <span className="text-sm text-gray-500">{task.timeSlotStart}-{task.timeSlotEnd}</span>
+                          </div>
                         </div>
                         <div className="flex gap-1">
                           <button 
