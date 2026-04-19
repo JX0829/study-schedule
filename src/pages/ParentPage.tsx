@@ -36,9 +36,11 @@ export function ParentPage() {
   
   const taskTemplates = useTemplateStore(state => state.taskTemplates);
   const addTaskTemplate = useTemplateStore(state => state.addTaskTemplate);
+  const updateTaskTemplate = useTemplateStore(state => state.updateTaskTemplate);
   const deleteTaskTemplate = useTemplateStore(state => state.deleteTaskTemplate);
   const rewardTemplates = useTemplateStore(state => state.rewardTemplates);
   const addRewardTemplate = useTemplateStore(state => state.addRewardTemplate);
+  const updateRewardTemplate = useTemplateStore(state => state.updateRewardTemplate);
   const deleteRewardTemplate = useTemplateStore(state => state.deleteRewardTemplate);
   const initDefaultTemplates = useTemplateStore(state => state.initDefaultTemplates);
   
@@ -55,6 +57,12 @@ export function ParentPage() {
   const [newTemplatePoints, setNewTemplatePoints] = useState('');
   const [newTemplateType, setNewTemplateType] = useState<'homework' | 'practice' | 'habit'>('habit');
   
+  // 任务模板编辑
+  const [editingTaskTemplate, setEditingTaskTemplate] = useState<any>(null);
+  const [editTaskTemplateName, setEditTaskTemplateName] = useState('');
+  const [editTaskTemplatePoints, setEditTaskTemplatePoints] = useState('');
+  const [editTaskTemplateType, setEditTaskTemplateType] = useState<'homework' | 'practice' | 'habit'>('habit');
+  
   // 任务模板剪切板导入
   const [showTaskClipboardImport, setShowTaskClipboardImport] = useState(false);
   const [taskClipboardText, setTaskClipboardText] = useState('');
@@ -64,6 +72,11 @@ export function ParentPage() {
   const [showAddRewardTemplate, setShowAddRewardTemplate] = useState(false);
   const [newRewardTemplateName, setNewRewardTemplateName] = useState('');
   const [newRewardTemplatePoints, setNewRewardTemplatePoints] = useState('');
+  
+  // 奖惩模板编辑
+  const [editingRewardTemplate, setEditingRewardTemplate] = useState<any>(null);
+  const [editRewardTemplateName, setEditRewardTemplateName] = useState('');
+  const [editRewardTemplatePoints, setEditRewardTemplatePoints] = useState('');
   
   // 奖惩模板剪切板导入
   const [showRewardClipboardImport, setShowRewardClipboardImport] = useState(false);
@@ -698,12 +711,22 @@ export function ParentPage() {
                           <Badge color={template.type === 'homework' ? 'blue' : template.type === 'practice' ? 'purple' : 'success'}>
                             {template.type === 'homework' ? '作业' : template.type === 'practice' ? '练习' : '习惯'}
                           </Badge>
-                          <Badge color="primary">+{template.points}分</Badge>
+                          <Badge color={template.points < 0 ? 'danger' : 'primary'}>{template.points}分</Badge>
                         </div>
                       </div>
-                      <Button size="sm" variant="danger" onClick={() => deleteTaskTemplate(template.id)}>
-                        删除
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          setEditingTaskTemplate(template);
+                          setEditTaskTemplateName(template.name);
+                          setEditTaskTemplatePoints(String(template.points));
+                          setEditTaskTemplateType(template.type);
+                        }}>
+                          ✏️
+                        </Button>
+                        <Button size="sm" variant="danger" onClick={() => deleteTaskTemplate(template.id)}>
+                          删除
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -842,9 +865,18 @@ export function ParentPage() {
                           {template.points > 0 ? `+${template.points}` : template.points}分
                         </Badge>
                       </div>
-                      <Button size="sm" variant="danger" onClick={() => deleteRewardTemplate(template.id)}>
-                        删除
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          setEditingRewardTemplate(template);
+                          setEditRewardTemplateName(template.name);
+                          setEditRewardTemplatePoints(String(template.points));
+                        }}>
+                          ✏️
+                        </Button>
+                        <Button size="sm" variant="danger" onClick={() => deleteRewardTemplate(template.id)}>
+                          删除
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -944,6 +976,95 @@ export function ParentPage() {
                   </Button>
                 </div>
               </Card>
+            )}
+
+            {/* 任务模板编辑弹窗 */}
+            {editingTaskTemplate && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-sm w-full p-4">
+                  <h3 className="font-medium text-gray-700 mb-4">✏️ 修改任务模板</h3>
+                  <div className="space-y-3 mb-4">
+                    <input
+                      type="text"
+                      value={editTaskTemplateName}
+                      onChange={(e) => setEditTaskTemplateName(e.target.value)}
+                      placeholder="任务名称"
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="text-gray-500 text-sm">分值</label>
+                        <input
+                          type="number"
+                          value={editTaskTemplatePoints}
+                          onChange={(e) => setEditTaskTemplatePoints(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg mt-1"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-gray-500 text-sm">类型</label>
+                        <select
+                          value={editTaskTemplateType}
+                          onChange={(e) => setEditTaskTemplateType(e.target.value as 'homework' | 'practice' | 'habit')}
+                          className="w-full px-3 py-2 border rounded-lg mt-1"
+                        >
+                          <option value="homework">作业</option>
+                          <option value="practice">练习</option>
+                          <option value="habit">习惯</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button className="flex-1" onClick={() => {
+                      updateTaskTemplate(editingTaskTemplate.id, {
+                        name: editTaskTemplateName,
+                        points: parseInt(editTaskTemplatePoints),
+                        type: editTaskTemplateType,
+                      });
+                      setEditingTaskTemplate(null);
+                    }}>保存</Button>
+                    <Button variant="secondary" className="flex-1" onClick={() => setEditingTaskTemplate(null)}>取消</Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 奖惩模板编辑弹窗 */}
+            {editingRewardTemplate && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-sm w-full p-4">
+                  <h3 className="font-medium text-gray-700 mb-4">✏️ 修改奖惩模板</h3>
+                  <div className="space-y-3 mb-4">
+                    <input
+                      type="text"
+                      value={editRewardTemplateName}
+                      onChange={(e) => setEditRewardTemplateName(e.target.value)}
+                      placeholder="奖惩名称"
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                    <div>
+                      <label className="text-gray-500 text-sm">分值（正数奖励，负数惩罚）</label>
+                      <input
+                        type="number"
+                        value={editRewardTemplatePoints}
+                        onChange={(e) => setEditRewardTemplatePoints(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button className="flex-1" onClick={() => {
+                      updateRewardTemplate(editingRewardTemplate.id, {
+                        name: editRewardTemplateName,
+                        points: parseInt(editRewardTemplatePoints),
+                      });
+                      setEditingRewardTemplate(null);
+                    }}>保存</Button>
+                    <Button variant="secondary" className="flex-1" onClick={() => setEditingRewardTemplate(null)}>取消</Button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}
