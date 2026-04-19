@@ -332,7 +332,7 @@ export function HomePage() {
                         <span className="text-xl">✅</span>
                         <div className="flex-1">
                           <div className="font-medium text-gray-800">{task.name}</div>
-                          <Badge color="success">+{task.points}分</Badge>
+                          <Badge color={task.points < 0 ? 'danger' : 'success'}>{task.points}分</Badge>
                         </div>
                       </div>
                     </div>
