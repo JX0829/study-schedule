@@ -61,6 +61,7 @@ export function HomePage() {
   const getDailyTasksByDate = useTaskStore(state => state.getDailyTasksByDate);
   const addDailyTask = useTaskStore(state => state.addDailyTask);
   const updateDailyTaskStatus = useTaskStore(state => state.updateDailyTaskStatus);
+  const deleteDailyTask = useTaskStore(state => state.deleteDailyTask);
   const getChildPoints = usePointsStore(state => state.getChildPoints);
   const earnPoints = usePointsStore(state => state.earnPoints);
   
@@ -277,7 +278,7 @@ export function HomePage() {
                         </div>
                       </div>
                       <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => updateDailyTaskStatus(task.id, 'pending')}>
+                        <Button size="sm" variant="ghost" onClick={() => deleteDailyTask(task.id)}>
                           🗑️
                         </Button>
                         <Button size="sm" onClick={() => handleMarkComplete(task.id)}>

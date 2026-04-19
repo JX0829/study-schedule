@@ -29,6 +29,7 @@ interface TaskState {
   addDailyTask: (task: Omit<DailyTask, 'id' | 'createdAt' | 'autoConfirmed'>) => DailyTask;
   addDailyTaskFromTemplate: (templateId: string, childId: string, date: string, timeSlotId: string) => DailyTask | null;
   updateDailyTaskStatus: (taskId: string, status: TaskStatus, extra?: Partial<DailyTask>) => void;
+  deleteDailyTask: (taskId: string) => void;
   getDailyTasksByDate: (date: string) => DailyTask[];
   getDailyTasksBySlot: (date: string, slotId: string) => DailyTask[];
   submitTask: (taskId: string) => void;
@@ -159,6 +160,12 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const dailyTasks = get().dailyTasks.map(t => 
       t.id === taskId ? { ...t, status, ...extra } : t
     );
+    storage.set(STORAGE_KEYS.DAILY_TASKS, dailyTasks);
+    set({ dailyTasks });
+  },
+
+  deleteDailyTask: (taskId) => {
+    const dailyTasks = get().dailyTasks.filter(t => t.id !== taskId);
     storage.set(STORAGE_KEYS.DAILY_TASKS, dailyTasks);
     set({ dailyTasks });
   },
