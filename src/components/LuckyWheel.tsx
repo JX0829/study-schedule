@@ -92,25 +92,27 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
     ctx.stroke();
   };
 
-  // 动画循环
-  const animate = (target: number) => {
+  // 动画循环 - 使用 ease-out 缓动函数
+  const animate = (target: number, startTime: number, duration: number = 4000) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const current = rotation;
-    const diff = target - current;
+    const now = Date.now();
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
     
-    if (Math.abs(diff) < 0.5) {
+    // ease-out cubic 缓动函数
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = rotation + (target - rotation) * eased;
+    
+    if (progress < 1) {
+      setRotation(current);
+      drawWheel(current);
+      animationRef.current = requestAnimationFrame(() => animate(target, startTime, duration));
+    } else {
       setRotation(target);
       drawWheel(target);
-      return;
     }
-    
-    // 缓动动画
-    const eased = current + diff * 0.1;
-    setRotation(eased);
-    drawWheel(eased);
-    animationRef.current = requestAnimationFrame(() => animate(target));
   };
 
   useEffect(() => {
@@ -203,7 +205,8 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
     targetRotationRef.current = targetAngle;
     
     // 启动动画
-    animationRef.current = requestAnimationFrame(() => animate(targetAngle));
+    const startTime = Date.now();
+    animationRef.current = requestAnimationFrame(() => animate(targetAngle, startTime, 4000));
 
     // 动画结束后显示结果
     setTimeout(() => {
@@ -253,7 +256,7 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
         <div className="relative w-72 h-72 mx-auto mb-4">
           {/* 指针 */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-30" style={{ zIndex: 30 }}>
-            <div className="w-0 h-0 border-l-8 border-r-8 border-t-16 border-transparent border-t-primary-600"></div>
+            <div className="w-0 h-0 border-l-10 border-r-10 border-t-20 border-transparent border-t-primary-600 filter drop-shadow-md"></div>
           </div>
           
           {/* 转盘 Canvas */}
@@ -261,17 +264,25 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
             ref={canvasRef}
             width={280}
             height={280}
-            className="w-full h-full rounded-full"
+            className="w-full h-full rounded-full shadow-xl border-4 border-primary-600"
           />
           
           {/* 中心按钮 */}
           <button
             onClick={handleSpin}
             disabled={isSpinning || !canSpin}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-white border-4 border-primary-600 flex items-center justify-center text-primary-600 font-bold text-xs shadow-lg disabled:opacity-50 disabled:cursor-not-allowed z-20"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-18 h-18 rounded-full bg-gradient-to-br from-white to-gray-100 border-4 border-primary-600 flex flex-col items-center justify-center text-primary-600 font-bold text-xs shadow-lg disabled:opacity-50 disabled:cursor-not-allowed z-20 hover:scale-105 transition-transform"
           >
-            {isSpinning ? '...' : canSpin ? `抽奖
-${remainingSpins}次` : '明天'}
+            {isSpinning ? (
+              <span className="text-lg">💫</span>
+            ) : canSpin ? (
+              <>
+                <span className="text-sm">抽奖</span>
+                <span className="text-xs text-gray-400">{remainingSpins}次</span>
+              </>
+            ) : (
+              <span className="text-sm">明天</span>
+            )}
           </button>
         </div>
 
