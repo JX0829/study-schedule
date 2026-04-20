@@ -2,13 +2,14 @@
  * 孩子端首页 - 自主创建任务 + 家长签字确认
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Page, Card, Button, TaskProgress, DateHeader, TabBar, Badge, PointsBadge, Icon, Modal } from '@/components';
 import { TimePicker } from '@/components/ui/TimePicker';
 import { SignPasswordInput } from '@/components/sign';
 import { LuckyWheel } from '@/components/LuckyWheel';
 import { useTaskStore, usePointsStore, useFamilyStore, useTemplateStore } from '@/store';
 import { getToday, formatDate } from '@/utils/date';
+import { startTaskReminder, stopTaskReminder } from '@/utils/taskReminder';
 import type { DailyTask } from '@/types';
 
 // 获取当前时间的 HH:mm 格式
@@ -49,6 +50,12 @@ export function HomePage() {
     if (!family?.id) return allTemplates;
     return allTemplates.filter(t => t.familyId === family.id);
   }, [allTemplates, family?.id]);
+  
+  // 启动任务提醒服务
+  useEffect(() => {
+    startTaskReminder();
+    return () => stopTaskReminder();
+  }, []);
   
   // 按当前家庭过滤奖惩模板
   const filteredRewardTemplates = useMemo(() => {

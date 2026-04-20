@@ -1,0 +1,15 @@
+{
+  "name": "studyplan-server",
+  "version": "1.0.0",
+  "description": "StudyPlan MongoDB backend server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongodb": "^6.3.0",
+    "cors": "^2.8.5"
+  }
+}

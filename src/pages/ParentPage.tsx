@@ -8,9 +8,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Page, Card, Button, Badge, Tabs, Icon, TaskProgress } from '@/components';
+import { PushSettings } from '@/components/PushSettings';
 import { useFamilyStore, useTaskStore, useRewardStore, usePasswordStore, useTemplateStore, usePointsStore } from '@/store';
 import { defaultSystemConfig } from '@/utils/presets';
 import { getToday, formatDate } from '@/utils/date';
+import { startTaskReminder, stopTaskReminder } from '@/utils/taskReminder';
 import type { SystemConfig, DailyTask } from '@/types';
 
 export function ParentPage() {
@@ -33,6 +35,12 @@ export function ParentPage() {
   const logout = usePasswordStore(state => state.logout);
   const getChildPoints = usePointsStore(state => state.getChildPoints);
   const earnPoints = usePointsStore(state => state.earnPoints);
+  
+  // 启动任务提醒服务
+  useEffect(() => {
+    startTaskReminder();
+    return () => stopTaskReminder();
+  }, []);
   
   const taskTemplates = useTemplateStore(state => state.taskTemplates);
   const addTaskTemplate = useTemplateStore(state => state.addTaskTemplate);
@@ -392,6 +400,7 @@ export function ParentPage() {
     { key: 'templates', label: '任务模板' },
     { key: 'rewards', label: '奖惩模板' },
     { key: 'prizes', label: '奖品配置' },
+    { key: 'push', label: '推送设置' },
     { key: 'config', label: '配置' },
   ];
 
@@ -1317,6 +1326,12 @@ export function ParentPage() {
         )}
 
         {/* 配置 */}
+        {activeTab === 'push' && (
+          <div className="space-y-4">
+            <PushSettings />
+          </div>
+        )}
+
         {activeTab === 'config' && (
           <div className="space-y-4">
             <Card>

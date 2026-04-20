@@ -7,6 +7,8 @@ import type { Reward, RedemptionRecord, RedemptionStatus } from '@/types';
 import { storage, STORAGE_KEYS } from '@/utils/storage';
 import { generateId } from '@/utils/date';
 import { usePointsStore } from './points';
+import { pushService } from '@/utils/push';
+import { useFamilyStore } from './family';
 
 interface RewardState {
   rewards: Reward[];
@@ -99,6 +101,10 @@ export const useRewardStore = create<RewardState>((set, get) => ({
     pointsStore.unlockPoints(childId, 'temp');
     pointsStore.lockPoints(childId, reward.cost, redemption.id);
 
+    // 推送通知家长
+    const child = useFamilyStore.getState().users.find(u => u.id === childId);
+    pushService.notifyRedemptionRequested(reward.name, reward.cost, child?.name || '孩子');
+
     return redemption;
   },
 
@@ -122,6 +128,11 @@ export const useRewardStore = create<RewardState>((set, get) => ({
     );
     storage.set(STORAGE_KEYS.REDEMPTION_RECORDS, records);
     set({ redemptionRecords: records });
+
+    // 推送通知孩子
+    if (reward) {
+      pushService.notifyRedemptionConfirmed(reward.name);
+    }
   },
 
   rejectRedemption: (redemptionId, reason) => {
@@ -138,6 +149,12 @@ export const useRewardStore = create<RewardState>((set, get) => ({
     );
     storage.set(STORAGE_KEYS.REDEMPTION_RECORDS, records);
     set({ redemptionRecords: records });
+
+    // 推送通知孩子
+    const reward = get().rewards.find(r => r.id === redemption.rewardId);
+    if (reward) {
+      pushService.notifyRedemptionRejected(reward.name, reason);
+    }
   },
 
   getRedemptionsByChild: (childId) => {

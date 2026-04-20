@@ -7,6 +7,8 @@ import type { TaskTemplate, TimeSlot, DailyTask, TaskStatus } from '@/types';
 import { storage, STORAGE_KEYS } from '@/utils/storage';
 import { generateId, formatDate, getToday } from '@/utils/date';
 import { defaultTimeSlots } from '@/utils/presets';
+import { pushService } from '@/utils/push';
+import { useFamilyStore } from './family';
 
 interface TaskState {
   templates: TaskTemplate[];
@@ -141,7 +143,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const slot = get().timeSlots.find(s => s.id === timeSlotId);
     if (!slot) return null;
 
-    return get().addDailyTask({
+    const task = get().addDailyTask({
       familyId: template.familyId,
       childId,
       date,
@@ -154,6 +156,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       timeSlotEnd: slot.endTime,
       status: 'pending',
     });
+
+    // 推送通知孩子
+    if (task) {
+      pushService.notifyNewTask(template.name, template.points, `${slot.startTime}-${slot.endTime}`);
+    }
+
+    return task;
   },
 
   updateDailyTaskStatus: (taskId, status, extra = {}) => {
@@ -182,6 +191,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     get().updateDailyTaskStatus(taskId, 'submitted', {
       submittedAt: new Date().toISOString(),
     });
+
+    // 推送通知家长审核
+    const task = get().dailyTasks.find(t => t.id === taskId);
+    if (task) {
+      const child = useFamilyStore.getState().users.find(u => u.id === task.childId);
+      pushService.notifyTaskSubmitted(task.name, child?.name || '孩子');
+    }
   },
 
   confirmTask: (taskId, confirmedBy, auto = false) => {
@@ -190,12 +206,24 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       confirmedBy,
       autoConfirmed: auto,
     });
+
+    // 推送通知孩子
+    const task = get().dailyTasks.find(t => t.id === taskId);
+    if (task) {
+      pushService.notifyTaskConfirmed(task.name, task.points);
+    }
   },
 
   rejectTask: (taskId, reason) => {
     get().updateDailyTaskStatus(taskId, 'rejected', {
       rejectedReason: reason,
     });
+
+    // 推送通知孩子
+    const task = get().dailyTasks.find(t => t.id === taskId);
+    if (task) {
+      pushService.notifyTaskRejected(task.name, reason);
+    }
   },
 
   copyYesterdayTasks: (todayDate, childId) => {
