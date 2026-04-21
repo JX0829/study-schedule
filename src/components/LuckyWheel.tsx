@@ -5,6 +5,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, Button, Badge } from '@/components';
 import { usePointsStore, useFamilyStore } from '@/store';
+import { storage, STORAGE_KEYS } from '@/utils/storage';
+import { getToday } from '@/utils/date';
 
 interface Prize {
   id: string;
@@ -117,9 +119,9 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
 
   useEffect(() => {
     // 加载奖品配置
-    const savedPrizes = localStorage.getItem('prizes');
-    if (savedPrizes) {
-      setPrizes(JSON.parse(savedPrizes));
+    const savedPrizes = storage.get<Prize[]>(STORAGE_KEYS.LUCKY_WHEEL_PRIZES);
+    if (savedPrizes && savedPrizes.length > 0) {
+      setPrizes(savedPrizes);
     } else {
       const defaultPrizes = [
         { id: '1', name: '再来一次', points: 0, probability: 30 },
@@ -130,22 +132,22 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
         { id: '6', name: '100积分', points: 100, probability: 2 },
       ];
       setPrizes(defaultPrizes);
-      localStorage.setItem('prizes', JSON.stringify(defaultPrizes));
+      storage.set(STORAGE_KEYS.LUCKY_WHEEL_PRIZES, defaultPrizes);
     }
     
     // 检查今天剩余抽奖次数
-    const today = new Date().toDateString();
-    const lastSpinDate = localStorage.getItem('lastSpinDate');
-    const lastSpinCount = parseInt(localStorage.getItem('lastSpinCount') || '0');
-    const dailySpinCount = parseInt(localStorage.getItem('dailySpinCount') || '1');
+    const today = getToday();
+    const savedState = storage.get<{ lastSpinDate: string; lastSpinCount: number; dailySpinCount: number }>(STORAGE_KEYS.LUCKY_WHEEL_STATE);
+    const dailySpinCount = savedState?.dailySpinCount || 1;
     
-    if (lastSpinDate !== today) {
-      localStorage.setItem('lastSpinDate', today);
-      localStorage.setItem('lastSpinCount', '0');
+    if (!savedState || savedState.lastSpinDate !== today) {
+      // 新的一天，重置抽奖次数
+      storage.set(STORAGE_KEYS.LUCKY_WHEEL_STATE, { lastSpinDate: today, lastSpinCount: 0, dailySpinCount });
       setRemainingSpins(dailySpinCount);
       setCanSpin(dailySpinCount > 0);
     } else {
-      const remaining = Math.max(0, dailySpinCount - lastSpinCount);
+      // 同一天，检查剩余次数
+      const remaining = Math.max(0, dailySpinCount - savedState.lastSpinCount);
       setRemainingSpins(remaining);
       setCanSpin(remaining > 0);
     }
@@ -157,20 +159,18 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
     }
     
     // 检查今天剩余抽奖次数
-    const today = new Date().toDateString();
-    const lastSpinDate = localStorage.getItem('lastSpinDate');
-    const lastSpinCount = parseInt(localStorage.getItem('lastSpinCount') || '0');
-    const dailySpinCount = parseInt(localStorage.getItem('dailySpinCount') || '1');
+    const today = getToday();
+    const savedState = storage.get<{ lastSpinDate: string; lastSpinCount: number; dailySpinCount: number }>(STORAGE_KEYS.LUCKY_WHEEL_STATE);
+    const dailySpinCount = savedState?.dailySpinCount || 1;
     
-    if (lastSpinDate !== today) {
+    if (!savedState || savedState.lastSpinDate !== today) {
       // 新的一天，重置抽奖次数
-      localStorage.setItem('lastSpinDate', today);
-      localStorage.setItem('lastSpinCount', '0');
+      storage.set(STORAGE_KEYS.LUCKY_WHEEL_STATE, { lastSpinDate: today, lastSpinCount: 0, dailySpinCount });
       setRemainingSpins(dailySpinCount);
       setCanSpin(dailySpinCount > 0);
     } else {
       // 同一天，检查剩余次数
-      const remaining = Math.max(0, dailySpinCount - lastSpinCount);
+      const remaining = Math.max(0, dailySpinCount - savedState.lastSpinCount);
       setRemainingSpins(remaining);
       setCanSpin(remaining > 0);
     }
@@ -214,14 +214,13 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
       setResult(selectedPrize);
       
       // 记录今天已抽奖次数
-      const today = new Date().toDateString();
-      localStorage.setItem('lastSpinDate', today);
-      const currentCount = parseInt(localStorage.getItem('lastSpinCount') || '0');
-      const dailySpinCount = parseInt(localStorage.getItem('dailySpinCount') || '1');
-      localStorage.setItem('lastSpinCount', String(currentCount + 1));
+      const today = getToday();
+      const savedState = storage.get<{ lastSpinDate: string; lastSpinCount: number; dailySpinCount: number }>(STORAGE_KEYS.LUCKY_WHEEL_STATE) || { lastSpinDate: today, lastSpinCount: 0, dailySpinCount: 1 };
+      const newCount = savedState.lastSpinCount + 1;
+      storage.set(STORAGE_KEYS.LUCKY_WHEEL_STATE, { ...savedState, lastSpinDate: today, lastSpinCount: newCount });
       
       // 检查是否还有剩余次数
-      setCanSpin(currentCount + 1 < dailySpinCount);
+      setCanSpin(newCount < savedState.dailySpinCount);
       
       // 发放积分
       if (child && selectedPrize.points > 0) {

@@ -39,6 +39,11 @@ export const STORAGE_KEYS = {
   SYSTEM_CONFIG: 'system_config',
   CURRENT_USER: 'current_user',
   PUSH_CONFIG: 'push_config',
+  PARENT_PASSWORD: 'parent_password',
+  SIGN_PASSWORD: 'sign_password',
+  SIGN_PASSWORD_DATE: 'sign_password_date',
+  LUCKY_WHEEL_PRIZES: 'lucky_wheel_prizes',
+  LUCKY_WHEEL_STATE: 'lucky_wheel_state',
 } as const;
 
 /**

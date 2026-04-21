@@ -12,9 +12,9 @@ import { usePushStore } from '@/utils/push';
 import type { PushScenarios } from '@/utils/push';
 
 export const PushSettings: React.FC = () => {
-  const { config, setPushKey, setEnabled, updateScenarios, loadFromStorage } = usePushStore();
+  const { config, setPushKey, setProxyUrl, setEnabled, updateScenarios, loadFromStorage } = usePushStore();
   const [pushKeyInput, setPushKeyInput] = useState(config.pushKey);
-  const [proxyUrl, setProxyUrl] = useState(''); // 用户可配置代理地址
+  const [proxyUrlInput, setProxyUrlInput] = useState(config.proxyUrl || 'https://push-proxy.asd1231506.workers.dev');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -24,12 +24,18 @@ export const PushSettings: React.FC = () => {
 
   const handleSaveKey = () => {
     setPushKey(pushKeyInput);
+    setProxyUrl(proxyUrlInput);
     setTestResult(null);
   };
 
   const handleTestPush = async () => {
     if (!pushKeyInput) {
       setTestResult({ success: false, message: '请先输入推送密钥' });
+      return;
+    }
+
+    if (!proxyUrlInput) {
+      setTestResult({ success: false, message: '请先输入代理地址' });
       return;
     }
 
@@ -44,42 +50,30 @@ export const PushSettings: React.FC = () => {
         type: 'text',
       });
 
-      // 优先使用用户配置的代理，否则使用默认公共代理
-      const proxies = proxyUrl ? [proxyUrl] : [
-        'https://push-proxy-production.kmtn.workers.dev', // 我部署的临时代理
-        'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://push.i-i.me'),
-      ];
+      // 使用用户配置的代理
+      const response = await fetch(proxyUrlInput, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+      });
 
-      for (const proxy of proxies) {
-        try {
-          const finalUrl = proxy.includes('push.i-i.me') ? proxy : proxy;
-          
-          const response = await fetch(finalUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: params.toString(),
-          });
+      const result = await response.text();
 
-          const result = await response.text();
-
-          if (result === 'success') {
-            setPushKey(pushKeyInput);
-            setTestResult({ success: true, message: '推送测试成功！请检查手机是否收到消息。密钥已自动保存。' });
-            return;
-          }
-
-          if (result.includes('DOCTYPE')) continue; // 被阻止，尝试下一个
-          
-          setTestResult({ success: false, message: `推送失败: ${result}` });
-          return;
-        } catch {
-          continue;
-        }
+      if (result === 'success') {
+        setPushKey(pushKeyInput);
+        setProxyUrl(proxyUrlInput);
+        setTestResult({ success: true, message: '推送测试成功！请检查手机是否收到消息。密钥和代理已自动保存。' });
+        return;
       }
 
-      setTestResult({ success: false, message: '所有代理都失败，请配置自己的代理地址' });
+      if (result.includes('DOCTYPE')) {
+        setTestResult({ success: false, message: '代理被阻止，请检查代理配置' });
+        return;
+      }
+      
+      setTestResult({ success: false, message: `推送失败: ${result}` });
     } catch (error) {
       setTestResult({ success: false, message: `推送异常: ${error instanceof Error ? error.message : '网络请求失败'}` });
     } finally {
@@ -101,6 +95,8 @@ export const PushSettings: React.FC = () => {
     redemptionRejected: { label: '兑换拒绝', desc: '家长拒绝兑换时通知孩子', icon: '💔' },
     pointsChanged: { label: '积分变动', desc: '积分变化时通知孩子', icon: '💰' },
     taskStartReminder: { label: '任务开始提醒', desc: '提前5分钟提醒即将开始的任务', icon: '🔔' },
+    extraReward: { label: '额外奖励', desc: '家长给予额外奖励时通知孩子', icon: '🎁' },
+    extraPenalty: { label: '额外惩罚', desc: '家长给予额外惩罚时通知孩子', icon: '⚠️' },
   };
 
   return (
@@ -158,8 +154,8 @@ export const PushSettings: React.FC = () => {
         </label>
         <input
           type="text"
-          value={proxyUrl}
-          onChange={(e) => setProxyUrl(e.target.value)}
+          value={proxyUrlInput}
+          onChange={(e) => setProxyUrlInput(e.target.value)}
           placeholder="例如: https://push-proxy.xxx.workers.dev"
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
@@ -172,7 +168,7 @@ export const PushSettings: React.FC = () => {
       <div className="mb-6">
         <button
           onClick={handleTestPush}
-          disabled={testing || !pushKeyInput || !proxyUrl}
+          disabled={testing || !pushKeyInput || !proxyUrlInput}
           className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition font-medium"
         >
           {testing ? '⏳ 测试中...' : '🧪 测试推送'}
@@ -187,6 +183,8 @@ export const PushSettings: React.FC = () => {
         {config.pushKey && !testResult && (
           <div className="mt-2 p-2 bg-gray-100 rounded text-sm text-gray-600">
             当前已保存密钥: <span className="font-mono">{config.pushKey.substring(0, 8)}...</span>
+            <br />
+            当前代理: <span className="font-mono">{config.proxyUrl}</span>
           </div>
         )}
       </div>

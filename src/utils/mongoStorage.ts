@@ -29,8 +29,9 @@ export class StorageAdapterMongoDB implements StorageAdapter {
   private pendingWrites: Map<string, any> = new Map();
   private writeTimer: number | null = null;
 
-  constructor(apiUrl: string = 'http://localhost:3002', familyId: string = 'default') {
-    this.apiUrl = apiUrl;
+  constructor(apiUrl: string = '', familyId: string = 'default') {
+    // 使用相对路径，通过 Vite 代理访问后端
+    this.apiUrl = apiUrl || ''; // 空字符串表示使用相对路径
     this.familyId = familyId;
   }
 
@@ -370,8 +371,8 @@ export class StorageAdapterMongoDB implements StorageAdapter {
   }
 }
 
-// 默认 API 地址
-const DEFAULT_API_URL = 'http://localhost:3002';
+// 默认使用相对路径（通过 Vite 代理）
+const DEFAULT_API_URL = ''; // 空字符串表示使用相对路径
 
 // 创建 MongoDB 存储实例
 export const mongoStorage = new StorageAdapterMongoDB(DEFAULT_API_URL);

@@ -13,6 +13,7 @@ import { useFamilyStore, useTaskStore, useRewardStore, usePasswordStore, useTemp
 import { defaultSystemConfig } from '@/utils/presets';
 import { getToday, formatDate } from '@/utils/date';
 import { startTaskReminder, stopTaskReminder } from '@/utils/taskReminder';
+import { storage, STORAGE_KEYS } from '@/utils/storage';
 import type { SystemConfig, DailyTask } from '@/types';
 
 export function ParentPage() {
@@ -35,6 +36,8 @@ export function ParentPage() {
   const logout = usePasswordStore(state => state.logout);
   const getChildPoints = usePointsStore(state => state.getChildPoints);
   const earnPoints = usePointsStore(state => state.earnPoints);
+  const addExtraReward = usePointsStore(state => state.addExtraReward);
+  const addExtraPenalty = usePointsStore(state => state.addExtraPenalty);
   
   // 启动任务提醒服务
   useEffect(() => {
@@ -125,9 +128,9 @@ export function ParentPage() {
 
   // 加载奖品配置
   useEffect(() => {
-    const savedPrizes = localStorage.getItem('prizes');
-    if (savedPrizes) {
-      setPrizes(JSON.parse(savedPrizes));
+    const savedPrizes = storage.get<any[]>(STORAGE_KEYS.LUCKY_WHEEL_PRIZES);
+    if (savedPrizes && savedPrizes.length > 0) {
+      setPrizes(savedPrizes);
     } else {
       // 默认奖品
       const defaultPrizes = [
@@ -139,13 +142,13 @@ export function ParentPage() {
         { id: '6', name: '100积分', points: 100, probability: 2 },
       ];
       setPrizes(defaultPrizes);
-      localStorage.setItem('prizes', JSON.stringify(defaultPrizes));
+      storage.set(STORAGE_KEYS.LUCKY_WHEEL_PRIZES, defaultPrizes);
     }
     
     // 加载每日抽奖次数
-    const savedSpinCount = localStorage.getItem('dailySpinCount');
-    if (savedSpinCount) {
-      setDailySpinCount(parseInt(savedSpinCount));
+    const savedState = storage.get<{ dailySpinCount: number }>(STORAGE_KEYS.LUCKY_WHEEL_STATE);
+    if (savedState?.dailySpinCount) {
+      setDailySpinCount(savedState.dailySpinCount);
     }
   }, []);
 
@@ -160,7 +163,7 @@ export function ParentPage() {
     };
     const updated = [...prizes, newPrize];
     setPrizes(updated);
-    localStorage.setItem('prizes', JSON.stringify(updated));
+    storage.set(STORAGE_KEYS.LUCKY_WHEEL_PRIZES, updated);
     setNewPrizeName('');
     setNewPrizePoints('');
     setNewPrizeProbability('');
@@ -171,13 +174,14 @@ export function ParentPage() {
   const handleDeletePrize = (id: string) => {
     const updated = prizes.filter(p => p.id !== id);
     setPrizes(updated);
-    localStorage.setItem('prizes', JSON.stringify(updated));
+    storage.set(STORAGE_KEYS.LUCKY_WHEEL_PRIZES, updated);
   };
 
   // 保存每日抽奖次数
   const handleSaveDailySpinCount = (count: number) => {
     setDailySpinCount(count);
-    localStorage.setItem('dailySpinCount', String(count));
+    const savedState = storage.get<any>(STORAGE_KEYS.LUCKY_WHEEL_STATE) || {};
+    storage.set(STORAGE_KEYS.LUCKY_WHEEL_STATE, { ...savedState, dailySpinCount: count });
   };
 
   // 编辑奖品
@@ -189,7 +193,7 @@ export function ParentPage() {
         : p
     );
     setPrizes(updated);
-    localStorage.setItem('prizes', JSON.stringify(updated));
+    storage.set(STORAGE_KEYS.LUCKY_WHEEL_PRIZES, updated);
     setEditingPrize(null);
   };
 
@@ -366,8 +370,15 @@ export function ParentPage() {
     const template = rewardTemplates.find(t => t.id === bonusTemplateId);
     if (!template) return;
     
-    // 积分入账（正数为奖励，负数为惩罚）
-    earnPoints(child.id, template.points, '', bonusDescription || template.name);
+    const points = Math.abs(template.points);
+    const description = bonusDescription || template.name;
+    
+    // 使用额外奖惩方法（带推送通知）
+    if (template.points > 0) {
+      addExtraReward(child.id, points, description);
+    } else {
+      addExtraPenalty(child.id, points, description);
+    }
     
     setShowBonusModal(false);
     setBonusTemplateId('');

@@ -12,6 +12,12 @@ export default defineConfig({
     port: 3333,
     host: true,
     allowedHosts: ['sp.1231506.xyz'],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+      },
+    },
   },
   resolve: {
     alias: {

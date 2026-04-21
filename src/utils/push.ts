@@ -21,6 +21,8 @@ export interface PushConfig {
   enabled: boolean;
   /** 推送场景配置 */
   scenarios: PushScenarios;
+  /** 代理服务器地址 */
+  proxyUrl: string;
 }
 
 export interface PushScenarios {
@@ -33,6 +35,8 @@ export interface PushScenarios {
   redemptionRejected: boolean;
   pointsChanged: boolean;
   taskStartReminder: boolean; // 任务开始提醒（提前5分钟）
+  extraReward: boolean; // 额外奖励
+  extraPenalty: boolean; // 额外惩罚
 }
 
 export type PushMessageType = 'text' | 'markdown' | 'html' | 'data' | 'markdata' | 'chart' | 'echarts';
@@ -53,6 +57,7 @@ export interface PushMessage {
 const DEFAULT_PUSH_CONFIG: PushConfig = {
   pushKey: '',
   enabled: false,
+  proxyUrl: 'https://push-proxy.asd1231506.workers.dev',
   scenarios: {
     newTask: true,
     taskSubmitted: true,
@@ -63,6 +68,8 @@ const DEFAULT_PUSH_CONFIG: PushConfig = {
     redemptionRejected: true,
     pointsChanged: true,
     taskStartReminder: true,
+    extraReward: true,
+    extraPenalty: true,
   },
 };
 
@@ -82,6 +89,7 @@ export class PushService {
       return {
         pushKey: saved.pushKey || '',
         enabled: saved.enabled || false,
+        proxyUrl: saved.proxyUrl || DEFAULT_PUSH_CONFIG.proxyUrl,
         scenarios: {
           ...DEFAULT_PUSH_CONFIG.scenarios,
           ...saved.scenarios,
@@ -103,6 +111,11 @@ export class PushService {
   setPushKey(pushKey: string): void {
     this.config.pushKey = pushKey;
     this.config.enabled = pushKey.length > 0;
+    this.saveConfig(this.config);
+  }
+
+  setProxyUrl(proxyUrl: string): void {
+    this.config.proxyUrl = proxyUrl;
     this.saveConfig(this.config);
   }
 
@@ -174,10 +187,10 @@ export class PushService {
 
     const body = params.toString();
 
-    // 尝试多个 CORS 代理
-    const proxies = [
-      // 方案1: allorigins.win (免费公共代理)
-      `https://api.allorigins.win/raw?url=${encodeURIComponent('https://push.i-i.me')}`,
+    // 优先使用用户配置的代理
+    const proxies = this.config.proxyUrl ? [this.config.proxyUrl] : [
+      // 默认代理
+      'https://push-proxy.asd1231506.workers.dev',
       // 方案2: 自建代理地址 (推荐)
       // 如果有自建代理，填在这里
     ];
@@ -318,6 +331,34 @@ export class PushService {
       avatar: '⏰',
     });
   }
+
+  /**
+   * 额外奖励通知
+   */
+  async notifyExtraReward(description: string, points: number): Promise<void> {
+    if (!this.shouldPush('extraReward')) return;
+    await this.send({
+      title: '额外奖励',
+      content: `恭喜获得额外奖励！\n原因：${description}\n积分：+${points}`,
+      theme: 'success',
+      group: 'StudyPlan',
+      avatar: '🎁',
+    });
+  }
+
+  /**
+   * 额外惩罚通知
+   */
+  async notifyExtraPenalty(description: string, points: number): Promise<void> {
+    if (!this.shouldPush('extraPenalty')) return;
+    await this.send({
+      title: '额外惩罚',
+      content: `收到额外惩罚\n原因：${description}\n扣分：-${points}`,
+      theme: 'failure',
+      group: 'StudyPlan',
+      avatar: '⚠️',
+    });
+  }
 }
 
 // ============ 单例实例 ============
@@ -331,6 +372,7 @@ import { create } from 'zustand';
 interface PushState {
   config: PushConfig;
   setPushKey: (key: string) => void;
+  setProxyUrl: (url: string) => void;
   setEnabled: (enabled: boolean) => void;
   updateScenarios: (scenarios: Partial<PushScenarios>) => void;
   notifyNewTask: (taskName: string, points: number, timeSlot?: string) => Promise<void>;
@@ -342,6 +384,8 @@ interface PushState {
   notifyRedemptionRejected: (rewardName: string, reason: string) => Promise<void>;
   notifyPointsChanged: (balance: number, change: number, description: string) => Promise<void>;
   notifyTaskStartReminder: (taskName: string, timeSlot: string) => Promise<void>;
+  notifyExtraReward: (description: string, points: number) => Promise<void>;
+  notifyExtraPenalty: (description: string, points: number) => Promise<void>;
   loadFromStorage: () => void;
 }
 
@@ -350,6 +394,11 @@ export const usePushStore = create<PushState>((set) => ({
 
   setPushKey: (key) => {
     pushService.setPushKey(key);
+    set({ config: pushService.getConfig() });
+  },
+
+  setProxyUrl: (url) => {
+    pushService.setProxyUrl(url);
     set({ config: pushService.getConfig() });
   },
 
@@ -397,6 +446,14 @@ export const usePushStore = create<PushState>((set) => ({
 
   notifyTaskStartReminder: async (taskName, timeSlot) => {
     await pushService.notifyTaskStartReminder(taskName, timeSlot);
+  },
+
+  notifyExtraReward: async (description, points) => {
+    await pushService.notifyExtraReward(description, points);
+  },
+
+  notifyExtraPenalty: async (description, points) => {
+    await pushService.notifyExtraPenalty(description, points);
   },
 
   loadFromStorage: () => {

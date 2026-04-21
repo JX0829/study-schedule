@@ -7,6 +7,7 @@ import type { PointsRecord, ChildPoints, PointsChangeType } from '@/types';
 import { storage, STORAGE_KEYS } from '@/utils/storage';
 import { generateId } from '@/utils/date';
 import { defaultSystemConfig } from '@/utils/presets';
+import { pushService } from '@/utils/push';
 
 interface PointsState {
   childPoints: ChildPoints[];
@@ -22,6 +23,8 @@ interface PointsState {
   deductPoints: (childId: string, points: number, redemptionId: string) => void;
   getPointsRecords: (childId: string) => PointsRecord[];
   initChildPoints: (childId: string) => void;
+  addExtraReward: (childId: string, points: number, description: string) => void;
+  addExtraPenalty: (childId: string, points: number, description: string) => void;
   loadFromStorage: () => void;
 }
 
@@ -179,6 +182,61 @@ export const usePointsStore = create<PointsState>((set, get) => ({
 
   getPointsRecords: (childId) => {
     return get().records.filter(r => r.childId === childId);
+  },
+
+  addExtraReward: (childId, points, description) => {
+    const childPoints = get().getChildPoints(childId);
+    const newBalance = Math.min(childPoints.balance + points, get().config.pointsLimit);
+    const actualEarned = newBalance - childPoints.balance;
+
+    if (actualEarned !== 0) {
+      get().addPointsRecord({
+        familyId: childPoints.childId,
+        childId,
+        changeType: 'extra_reward',
+        points: actualEarned,
+        balanceAfter: newBalance,
+        lockedPoints: childPoints.locked,
+        description,
+      });
+
+      const updated = get().childPoints.map(p => 
+        p.childId === childId 
+          ? { ...p, balance: newBalance, totalEarned: p.totalEarned + points }
+          : p
+      );
+      storage.set(STORAGE_KEYS.CHILD_POINTS, updated);
+      set({ childPoints: updated });
+
+      // 推送通知
+      pushService.notifyExtraReward(description, actualEarned);
+    }
+  },
+
+  addExtraPenalty: (childId, points, description) => {
+    const childPoints = get().getChildPoints(childId);
+    const newBalance = childPoints.balance - points;
+
+    get().addPointsRecord({
+      familyId: childPoints.childId,
+      childId,
+      changeType: 'extra_penalty',
+      points: -points,
+      balanceAfter: newBalance,
+      lockedPoints: childPoints.locked,
+      description,
+    });
+
+    const updated = get().childPoints.map(p => 
+      p.childId === childId 
+        ? { ...p, balance: newBalance }
+        : p
+    );
+    storage.set(STORAGE_KEYS.CHILD_POINTS, updated);
+    set({ childPoints: updated });
+
+    // 推送通知
+    pushService.notifyExtraPenalty(description, points);
   },
 
   loadFromStorage: () => {

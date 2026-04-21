@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '@/utils/storage';
-import { generateId, formatDate, getToday } from '@/utils/date';
+import { getToday } from '@/utils/date';
 
 // ============ 类型定义 ============
 
@@ -44,7 +44,7 @@ export const usePasswordStore = create<PasswordState>((set, get) => ({
   isAuthenticated: false,
 
   initPassword: (password) => {
-    storage.set('parent_password', password);
+    storage.set(STORAGE_KEYS.PARENT_PASSWORD, password);
     set({ parentPassword: password, isAuthenticated: true });
   },
 
@@ -72,8 +72,8 @@ export const usePasswordStore = create<PasswordState>((set, get) => ({
     
     // 生成新的签字密码
     const newPassword = generateRandomPassword(4);
-    storage.set('sign_password', newPassword);
-    storage.set('sign_password_date', today);
+    storage.set(STORAGE_KEYS.SIGN_PASSWORD, newPassword);
+    storage.set(STORAGE_KEYS.SIGN_PASSWORD_DATE, today);
     set({ signPassword: newPassword, signPasswordDate: today });
     return newPassword;
   },
@@ -96,9 +96,9 @@ export const usePasswordStore = create<PasswordState>((set, get) => ({
   },
 
   loadFromStorage: () => {
-    const parentPassword = storage.get<string>('parent_password');
-    const signPassword = storage.get<string>('sign_password');
-    const signPasswordDate = storage.get<string>('sign_password_date');
+    const parentPassword = storage.get<string>(STORAGE_KEYS.PARENT_PASSWORD);
+    const signPassword = storage.get<string>(STORAGE_KEYS.SIGN_PASSWORD);
+    const signPasswordDate = storage.get<string>(STORAGE_KEYS.SIGN_PASSWORD_DATE);
     
     set({
       parentPassword,

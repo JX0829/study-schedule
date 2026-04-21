@@ -40,101 +40,25 @@ async function connectMongo() {
     collection = db.collection(COLLECTION_NAME);
     console.log(`✅ MongoDB 连接成功: ${MONGO_URL}`);
     
-    // 创建索引（提高查询效率）
-    await collection.createIndex({ key: 1 }, { unique: true });
-    await collection.createIndex({ familyId: 1 });
+    // 先删除旧的单一字段索引（如果存在）
+    try {
+      await collection.dropIndex('key_1');
+      console.log('🗑️ 已删除旧索引 key_1');
+    } catch (e) {
+      // 索引不存在，忽略
+    }
+
+    // 创建复合索引（提高查询效率）
+    // key + familyId 组合唯一，允许不同家庭使用相同的键名
+    await collection.createIndex({ key: 1, familyId: 1 }, { unique: true });
+    console.log('📌 已创建复合索引: { key: 1, familyId: 1 }');
   } catch (error) {
     console.error('❌ MongoDB 连接失败:', error.message);
     process.exit(1);
   }
 }
 
-/**
- * 获取数据
- * GET /api/storage/:key
- * GET /api/storage/:key?familyId=xxx
- */
-app.get('/api/storage/:key', async (req, res) => {
-  try {
-    const { key } = req.params;
-    const { familyId } = req.query;
-
-    const query = { key };
-    if (familyId) {
-      query.familyId = familyId;
-    }
-
-    const doc = await collection.findOne(query);
-
-    if (!doc) {
-      return res.json({ success: true, data: null });
-    }
-
-    res.json({ success: true, data: doc.value });
-  } catch (error) {
-    console.error('GET error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-/**
- * 设置数据
- * POST /api/storage/:key
- * Body: { value: ..., familyId?: ... }
- */
-app.post('/api/storage/:key', async (req, res) => {
-  try {
-    const { key } = req.params;
-    const { value, familyId } = req.body;
-
-    const filter = { key };
-    if (familyId) {
-      filter.familyId = familyId;
-    }
-
-    const update = {
-      $set: {
-        key,
-        value,
-        familyId: familyId || 'default',
-        updatedAt: new Date(),
-      },
-      $setOnInsert: {
-        createdAt: new Date(),
-      },
-    };
-
-    await collection.updateOne(filter, update, { upsert: true });
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('POST error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-/**
- * 删除数据
- * DELETE /api/storage/:key
- */
-app.delete('/api/storage/:key', async (req, res) => {
-  try {
-    const { key } = req.params;
-    const { familyId } = req.query;
-
-    const filter = { key };
-    if (familyId) {
-      filter.familyId = familyId;
-    }
-
-    await collection.deleteOne(filter);
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('DELETE error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+// 特殊路由必须在动态路由之前定义
 
 /**
  * 获取所有键
@@ -246,6 +170,99 @@ app.post('/api/storage/batch-set', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
+/**
+ * 获取数据
+ * GET /api/storage/:key
+ * GET /api/storage/:key?familyId=xxx
+ */
+app.get('/api/storage/:key', async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { familyId } = req.query;
+
+    const query = { key };
+    if (familyId) {
+      query.familyId = familyId;
+    }
+
+    const doc = await collection.findOne(query);
+
+    if (!doc) {
+      return res.json({ success: true, data: null });
+    }
+
+    res.json({ success: true, data: doc.value });
+  } catch (error) {
+    console.error('GET error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * 设置数据
+ * POST /api/storage/:key
+ * Body: { value: ..., familyId?: ... }
+ */
+app.post('/api/storage/:key', async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { value, familyId } = req.body;
+
+    const filter = { key };
+    if (familyId) {
+      filter.familyId = familyId;
+    }
+
+    const update = {
+      $set: {
+        key,
+        value,
+        familyId: familyId || 'default',
+        updatedAt: new Date(),
+      },
+      $setOnInsert: {
+        createdAt: new Date(),
+      },
+    };
+
+    await collection.updateOne(filter, update, { upsert: true });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('POST error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * 删除数据
+ * DELETE /api/storage/:key
+ */
+app.delete('/api/storage/:key', async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { familyId } = req.query;
+
+    const filter = { key };
+    if (familyId) {
+      filter.familyId = familyId;
+    }
+
+    await collection.deleteOne(filter);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('DELETE error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+
+
+
+
 
 /**
  * 健康检查

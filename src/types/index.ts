@@ -79,7 +79,7 @@ export interface DailyTask {
 
 // ============ 积分系统 ============
 
-export type PointsChangeType = 'earn' | 'bonus' | 'redeem_lock' | 'redeem_unlock' | 'redeem_deduct';
+export type PointsChangeType = 'earn' | 'bonus' | 'redeem_lock' | 'redeem_unlock' | 'redeem_deduct' | 'extra_reward' | 'extra_penalty';
 
 export interface PointsRecord {
   id: string;
