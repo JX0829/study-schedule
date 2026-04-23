@@ -7,7 +7,7 @@ import { Page, Card, Button, TaskProgress, DateHeader, TabBar, Badge, PointsBadg
 import { TimePicker } from '@/components/ui/TimePicker';
 import { SignPasswordInput } from '@/components/sign';
 import { LuckyWheel } from '@/components/LuckyWheel';
-import { useTaskStore, usePointsStore, useFamilyStore, useTemplateStore } from '@/store';
+import { useTaskStore, usePointsStore, useFamilyStore, useTemplateStore, useRewardStore } from '@/store';
 import { getToday, formatDate } from '@/utils/date';
 import { startTaskReminder, stopTaskReminder } from '@/utils/taskReminder';
 import type { DailyTask } from '@/types';
@@ -71,6 +71,7 @@ export function HomePage() {
   const updateDailyTaskStatus = useTaskStore(state => state.updateDailyTaskStatus);
   const deleteDailyTask = useTaskStore(state => state.deleteDailyTask);
   const getChildPoints = usePointsStore(state => state.getChildPoints);
+  const getPointsRecords = usePointsStore(state => state.getPointsRecords);
   const earnPoints = usePointsStore(state => state.earnPoints);
   
   // 新任务的起始和结束时间（孩子自主选择）
@@ -87,6 +88,13 @@ export function HomePage() {
   // 编辑已完成任务
   const [editingTask, setEditingTask] = useState<DailyTask | null>(null);
   const [editTaskPoints, setEditTaskPoints] = useState('');
+  
+  // 兑换积分
+  const [showRedeemModal, setShowRedeemModal] = useState(false);
+  const [redeemPoints, setRedeemPoints] = useState('');
+  
+  // 积分记录时间范围
+  const [recordDays, setRecordDays] = useState(7);
   
   // 获取孩子用户
   const child = users.find(u => u.role === 'child');
@@ -106,23 +114,44 @@ export function HomePage() {
   const progress = useMemo(() => {
     const completed = todayTasks.filter(t => t.status === 'completed').length;
     // 已完成任务积分（包含正负）
-    const pointsEarned = todayTasks
+    const taskPointsEarned = todayTasks
       .filter(t => t.status === 'completed')
       .reduce((sum, t) => sum + t.points, 0);
+    
+    // 获取当天额外奖励积分记录（extra_reward 类型）
+    const todayExtraRewards = child ? getPointsRecords(child.id).filter(r => {
+      const recordDate = new Date(r.createdAt).toISOString().split('T')[0];
+      return recordDate === currentDate && r.changeType === 'extra_reward';
+    }) : [];
+    const extraRewardPoints = todayExtraRewards.reduce((sum, r) => sum + r.points, 0);
+    
+    // 当天获取积分 = 任务积分 + 额外奖励积分
+    const pointsEarned = taskPointsEarned + extraRewardPoints;
+    
     // 待完成任务积分（包含正负）
     const pendingPoints = todayTasks
       .filter(t => t.status === 'pending' || t.status === 'submitted')
       .reduce((sum, t) => sum + t.points, 0);
     // 总分 = 已完成 + 待完成（包含正负积分累加）
-    const totalPoints = pointsEarned + pendingPoints;
-    return { completed, total: todayTasks.length, pointsEarned, totalPoints };
-  }, [todayTasks]);
+    const totalPoints = taskPointsEarned + pendingPoints;
+    return { completed, total: todayTasks.length, pointsEarned, extraRewardPoints, taskPointsEarned, totalPoints, todayExtraRewards };
+  }, [todayTasks, child, getPointsRecords, currentDate]);
   
   // 获取积分
   const childPoints = useMemo(() => {
     if (!child) return null;
     return getChildPoints(child.id);
   }, [child, getChildPoints]);
+  
+  // 获取积分记录（最近N天）
+  const pointsRecords = useMemo(() => {
+    if (!child) return [];
+    const allRecords = getPointsRecords(child.id);
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - recordDays);
+    return allRecords.filter(r => new Date(r.createdAt) >= cutoffDate)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [child, getPointsRecords, recordDays]);
   
   // 日期切换
   const prevDay = () => {
@@ -228,24 +257,32 @@ export function HomePage() {
     <Page showHeader={false} className="pb-16">
       {/* 顶部信息 */}
       <div className="px-4 py-3 bg-white/90 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-md mx-auto flex items-center justify-between">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">👋</span>
             <div>
               <div className="font-medium text-gray-800">{child?.name}</div>
-              <div className="text-xs text-gray-500">今天有效积分: {progress.pointsEarned}</div>
+              <div className="text-xs text-gray-500">
+                今天有效积分: {progress.taskPointsEarned}
+                {progress.extraRewardPoints > 0 && (
+                  <span className="text-green-500"> (+{progress.extraRewardPoints}奖励)</span>
+                )}
+              </div>
             </div>
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-primary-600">{progress.pointsEarned}</div>
             <div className="text-xs text-gray-400">今日已获得</div>
+            {progress.extraRewardPoints > 0 && (
+              <div className="text-xs text-green-500">含奖励 {progress.extraRewardPoints}分</div>
+            )}
           </div>
         </div>
       </div>
 
       {/* 任务内容 */}
       {activeTab === 'tasks' && (
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-lg mx-auto px-4 py-4">
           <DateHeader 
             date={currentDate}
             onPrevDay={prevDay}
@@ -258,6 +295,7 @@ export function HomePage() {
               completed={progress.completed}
               total={progress.total}
               pointsEarned={progress.pointsEarned}
+              totalPoints={progress.totalPoints}
             />
           )}
           
@@ -420,6 +458,36 @@ export function HomePage() {
               </Card>
             )}
             
+            {/* 额外奖励 */}
+            {progress.todayExtraRewards.length > 0 && (
+              <Card>
+                <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <Icon name="gift" size={18} />
+                  额外奖励 ({progress.todayExtraRewards.length})
+                </h3>
+                <div className="space-y-2">
+                  {progress.todayExtraRewards.map(record => (
+                    <div key={record.id} className="flex items-center justify-between py-2 px-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">🎁</span>
+                        <div>
+                          <div className="font-medium text-gray-800">{record.description}</div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(record.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-lg font-bold text-green-600">+{record.points}分</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-2 border-t border-gray-100 text-center">
+                  <span className="text-sm text-gray-500">奖励合计: </span>
+                  <span className="font-bold text-green-600">+{progress.extraRewardPoints}分</span>
+                </div>
+              </Card>
+            )}
+            
             {/* 空状态 */}
             {todayTasks.length === 0 && (
               <Card>
@@ -436,7 +504,7 @@ export function HomePage() {
 
       {/* 积分内容 */}
       {activeTab === 'points' && (
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-lg mx-auto px-4 py-4">
           <Card className="mb-4">
             <div className="text-center py-4">
               <div className="text-4xl mb-2">⭐</div>
@@ -461,11 +529,74 @@ export function HomePage() {
                       <span className="font-medium ml-1">{childPoints.totalRedeemed}</span>
                     </div>
                   </div>
+                  {/* 兑换积分按钮 */}
+                  <Button className="mt-4" onClick={() => setShowRedeemModal(true)}>
+                    💰 申请兑换积分
+                  </Button>
                 </>
               ) : (
                 <div className="text-gray-400">暂无积分数据</div>
               )}
             </div>
+          </Card>
+          
+          {/* 积分记录 */}
+          <Card className="mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-gray-700">积分记录</h3>
+              <select 
+                value={recordDays}
+                onChange={(e) => setRecordDays(Number(e.target.value))}
+                className="text-sm text-gray-500 bg-transparent"
+              >
+                <option value={7}>最近7天</option>
+                <option value={14}>最近14天</option>
+                <option value={30}>最近30天</option>
+              </select>
+            </div>
+            
+            {pointsRecords.length > 0 ? (
+              <div className="space-y-2">
+                {pointsRecords.map(record => (
+                  <div key={record.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800 text-sm">
+                        {record.changeType === 'earn' && '完成任务'}
+                        {record.changeType === 'extra_reward' && '🎁 奖励'}
+                        {record.changeType === 'extra_penalty' && '⚠️ 惩罚'}
+                        {record.changeType === 'redeem_lock' && '🔒 兑换锁定'}
+                        {record.changeType === 'redeem_unlock' && '🔓 兑换解锁'}
+                        {record.changeType === 'redeem_deduct' && '✅ 兑换成功'}
+                        {!['earn', 'extra_reward', 'extra_penalty', 'redeem_lock', 'redeem_unlock', 'redeem_deduct'].includes(record.changeType) && '积分变动'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {record.description}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(record.createdAt).toLocaleString('zh-CN', {
+                          month: 'numeric',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`font-bold ${record.points > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {record.points > 0 ? '+' : ''}{record.points}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        余额: {record.balanceAfter}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-400">
+                暂无积分记录
+              </div>
+            )}
           </Card>
           
           <Card className="bg-yellow-50 border-yellow-200">
@@ -481,7 +612,7 @@ export function HomePage() {
 
       {/* 奖励内容 */}
       {activeTab === 'rewards' && (
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-lg mx-auto px-4 py-4">
           <LuckyWheel />
         </div>
       )}
@@ -720,6 +851,85 @@ export function HomePage() {
             setSelectedTaskId(null);
           }}
         />
+      </Modal>
+      
+      {/* 兑换积分模态框 */}
+      <Modal
+        isOpen={showRedeemModal}
+        onClose={() => {
+          setShowRedeemModal(false);
+          setRedeemPoints('');
+        }}
+        title="申请兑换积分"
+      >
+        <div className="py-4">
+          <div className="text-center mb-4">
+            <div className="text-sm text-gray-500">当前可用积分</div>
+            <div className="text-2xl font-bold text-primary-600">
+              {childPoints ? childPoints.balance - childPoints.locked : 0}
+            </div>
+          </div>
+          
+          <div className="mb-4">
+            <label className="text-gray-500 text-sm block mb-2">兑换积分数量</label>
+            <input
+              type="number"
+              value={redeemPoints}
+              onChange={(e) => setRedeemPoints(e.target.value)}
+              placeholder="请输入要兑换的积分数量"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              min="1"
+              max={childPoints ? childPoints.balance - childPoints.locked : 0}
+            />
+          </div>
+          
+          <div className="bg-yellow-50 border-yellow-200 rounded-lg p-3 mb-4">
+            <div className="text-sm text-yellow-700">
+              <p className="font-medium mb-1">💡 提示</p>
+              <p>• 兑换申请提交后，积分将被锁定</p>
+              <p>• 需要家长审核通过后才能使用</p>
+              <p>• 如果家长驳回，积分会自动解锁</p>
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              className="flex-1"
+              onClick={() => {
+                const points = parseInt(redeemPoints);
+                if (!points || points <= 0) return;
+                if (!child || !childPoints) return;
+                const available = childPoints.balance - childPoints.locked;
+                if (points > available) {
+                  alert('积分不足');
+                  return;
+                }
+                
+                // 创建自定义积分兑换申请
+                const result = useRewardStore.getState().createCustomPointsRedemption(child.id, points);
+                if (result) {
+                  setShowRedeemModal(false);
+                  setRedeemPoints('');
+                  alert('兑换申请已提交，等待家长审核');
+                } else {
+                  alert('提交失败，请稍后重试');
+                }
+              }}
+            >
+              提交申请
+            </Button>
+            <Button 
+              variant="secondary" 
+              className="flex-1"
+              onClick={() => {
+                setShowRedeemModal(false);
+                setRedeemPoints('');
+              }}
+            >
+              取消
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* 底部 TabBar */}

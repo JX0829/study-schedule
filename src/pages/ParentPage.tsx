@@ -419,7 +419,7 @@ export function ParentPage() {
     <Page showHeader={false} className="pb-20">
       {/* 顶部标题 */}
       <div className="px-4 py-3 bg-blue-500/90 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-md mx-auto flex items-center justify-between">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">👨‍👩‍👧</span>
             <div>
@@ -438,13 +438,13 @@ export function ParentPage() {
 
       {/* Tabs */}
       <div className="bg-white sticky top-[52px] z-9 border-b">
-        <div className="max-w-md mx-auto overflow-x-auto">
+        <div className="max-w-lg mx-auto overflow-x-auto">
           <Tabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} />
         </div>
       </div>
 
       {/* 内容区域 */}
-      <div className="max-w-md mx-auto px-4 py-4">
+      <div className="max-w-lg mx-auto px-4 py-4">
         {/* 今日任务 */}
         {activeTab === 'today' && (
           <div className="space-y-4">
@@ -461,6 +461,7 @@ export function ParentPage() {
                 completed={progress.completed}
                 total={progress.total}
                 pointsEarned={progress.pointsEarned}
+                totalPoints={progress.totalPoints}
               />
             )}
 
