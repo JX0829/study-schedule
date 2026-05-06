@@ -5,8 +5,6 @@
  * 替代 localStorage，实现云端数据存储
  */
 
-import { STORAGE_KEYS } from './storage';
-
 export interface StorageAdapter {
   get<T>(key: string): Promise<T | null>;
   set<T>(key: string, value: T): Promise<void>;

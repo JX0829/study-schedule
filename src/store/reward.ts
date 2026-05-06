@@ -22,6 +22,7 @@ interface RewardState {
   
   // Redemption Actions
   createRedemption: (childId: string, rewardId: string) => RedemptionRecord | null;
+  createCustomPointsRedemption: (childId: string, points: number) => RedemptionRecord | null;
   confirmRedemption: (redemptionId: string, confirmedBy: string, auto?: boolean) => void;
   rejectRedemption: (redemptionId: string, reason: string) => void;
   getRedemptionsByChild: (childId: string) => RedemptionRecord[];
@@ -33,7 +34,7 @@ interface RewardState {
 
 export const useRewardStore = create<RewardState>((set, get) => ({
   rewards: [],
-  redemptionRecords: [],
+  redemptionRecords: [] as RedemptionRecord[],
 
   // Reward Actions
   addReward: (data) => {
@@ -77,12 +78,11 @@ export const useRewardStore = create<RewardState>((set, get) => ({
     // 检查库存
     if (reward.stock !== undefined && reward.stock <= 0) return null;
 
-    // 检查积分并锁定
-    const pointsStore = usePointsStore.getState();
-    if (!pointsStore.lockPoints(childId, reward.cost, 'temp')) return null;
+    // 先生成兑换记录 ID，避免使用 'temp' 导致解锁错误
+    const redemptionId = generateId();
 
     const redemption: RedemptionRecord = {
-      id: generateId(),
+      id: redemptionId,
       familyId: reward.familyId,
       childId,
       rewardId,
@@ -92,18 +92,51 @@ export const useRewardStore = create<RewardState>((set, get) => ({
       autoConfirmed: false,
     };
 
-    // 更新锁定记录中的 redemptionId
+    // 检查积分并锁定（直接使用正式的兑换记录 ID）
+    const pointsStore = usePointsStore.getState();
+    if (!pointsStore.lockPoints(childId, reward.cost, redemptionId)) return null;
+
+    // 锁定成功后保存兑换记录
     const records = [...get().redemptionRecords, redemption];
     storage.set(STORAGE_KEYS.REDEMPTION_RECORDS, records);
     set({ redemptionRecords: records });
 
-    // 重新锁定并关联正确的 redemptionId
-    pointsStore.unlockPoints(childId, 'temp');
-    pointsStore.lockPoints(childId, reward.cost, redemption.id);
-
     // 推送通知家长
     const child = useFamilyStore.getState().users.find(u => u.id === childId);
     pushService.notifyRedemptionRequested(reward.name, reward.cost, child?.name || '孩子');
+
+    return redemption;
+  },
+
+  createCustomPointsRedemption: (childId, points) => {
+    const familyId = useFamilyStore.getState().family?.id || childId;
+
+    // 先生成兑换记录 ID，避免使用 'temp' 导致解锁错误
+    const redemptionId = generateId();
+
+    const redemption: RedemptionRecord = {
+      id: redemptionId,
+      familyId,
+      childId,
+      rewardId: 'custom_points', // 特殊标记表示自定义积分兑换
+      pointsCost: points,
+      lockedAt: new Date().toISOString(),
+      status: 'pending',
+      autoConfirmed: false,
+    };
+
+    // 检查积分并锁定（直接使用正式的兑换记录 ID）
+    const pointsStore = usePointsStore.getState();
+    if (!pointsStore.lockPoints(childId, points, redemptionId)) return null;
+
+    // 锁定成功后保存兑换记录
+    const records = [...get().redemptionRecords, redemption];
+    storage.set(STORAGE_KEYS.REDEMPTION_RECORDS, records);
+    set({ redemptionRecords: records });
+
+    // 推送通知家长
+    const child = useFamilyStore.getState().users.find(u => u.id === childId);
+    pushService.notifyRedemptionRequested(`${points}积分`, points, child?.name || '孩子');
 
     return redemption;
   },
@@ -115,10 +148,12 @@ export const useRewardStore = create<RewardState>((set, get) => ({
     const pointsStore = usePointsStore.getState();
     pointsStore.deductPoints(redemption.childId, redemption.pointsCost, redemptionId);
 
-    // 更新奖励库存
-    const reward = get().rewards.find(r => r.id === redemption.rewardId);
-    if (reward && reward.stock !== undefined) {
-      get().updateReward(reward.id, { stock: reward.stock - 1 });
+    // 更新奖励库存（如果不是自定义积分兑换）
+    if (redemption.rewardId !== 'custom_points') {
+      const reward = get().rewards.find(r => r.id === redemption.rewardId);
+      if (reward && reward.stock !== undefined) {
+        get().updateReward(reward.id, { stock: reward.stock - 1 });
+      }
     }
 
     const records = get().redemptionRecords.map(r => 
@@ -130,8 +165,13 @@ export const useRewardStore = create<RewardState>((set, get) => ({
     set({ redemptionRecords: records });
 
     // 推送通知孩子
-    if (reward) {
-      pushService.notifyRedemptionConfirmed(reward.name);
+    if (redemption.rewardId === 'custom_points') {
+      pushService.notifyRedemptionConfirmed(`${redemption.pointsCost}积分`);
+    } else {
+      const reward = get().rewards.find(r => r.id === redemption.rewardId);
+      if (reward) {
+        pushService.notifyRedemptionConfirmed(reward.name);
+      }
     }
   },
 
@@ -151,9 +191,13 @@ export const useRewardStore = create<RewardState>((set, get) => ({
     set({ redemptionRecords: records });
 
     // 推送通知孩子
-    const reward = get().rewards.find(r => r.id === redemption.rewardId);
-    if (reward) {
-      pushService.notifyRedemptionRejected(reward.name, reason);
+    if (redemption.rewardId === 'custom_points') {
+      pushService.notifyRedemptionRejected(`${redemption.pointsCost}积分`, reason);
+    } else {
+      const reward = get().rewards.find(r => r.id === redemption.rewardId);
+      if (reward) {
+        pushService.notifyRedemptionRejected(reward.name, reason);
+      }
     }
   },
 

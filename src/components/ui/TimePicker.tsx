@@ -2,7 +2,7 @@
  * iOS Picker 风格的时间选择器（支持起始时间和结束时间）
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 
 interface TimePickerProps {
   startTime: string; // HH:mm 格式

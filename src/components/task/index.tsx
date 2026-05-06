@@ -13,23 +13,22 @@ interface TaskItemProps {
   role: 'parent' | 'child';
   onSubmit?: () => void;
   onConfirm?: () => void;
-  onReject?: (reason: string) => void;
   onView?: () => void;
 }
 
-export function TaskItem({ task, role, onSubmit, onConfirm, onReject, onView }: TaskItemProps) {
+export function TaskItem({ task, role, onSubmit, onConfirm, onView }: TaskItemProps) {
   const isCompleted = task.status === 'completed';
   const isPending = task.status === 'pending';
   const isSubmitted = task.status === 'submitted';
   
-  const statusColors: Record<TaskStatus, string> = {
+  const statusColors = {
     pending: 'gray',
     in_progress: 'blue',
     submitted: 'primary',
     completed: 'success',
     rejected: 'danger',
     expired: 'gray',
-  };
+  } satisfies Record<TaskStatus, 'gray' | 'blue' | 'primary' | 'success' | 'danger'>;
 
   return (
     <div 
@@ -91,10 +90,9 @@ interface TaskListProps {
   role: 'parent' | 'child';
   onSubmit?: (taskId: string) => void;
   onConfirm?: (taskId: string) => void;
-  onReject?: (taskId: string, reason: string) => void;
 }
 
-export function TaskList({ tasks, timeSlots, role, onSubmit, onConfirm, onReject }: TaskListProps) {
+export function TaskList({ tasks, timeSlots, role, onSubmit, onConfirm }: TaskListProps) {
   // 按时间段分组
   const groupedTasks = timeSlots.map(slot => ({
     slot,
@@ -127,7 +125,6 @@ export function TaskList({ tasks, timeSlots, role, onSubmit, onConfirm, onReject
                   role={role}
                   onSubmit={() => onSubmit?.(task.id)}
                   onConfirm={() => onConfirm?.(task.id)}
-                  onReject={(reason) => onReject?.(task.id, reason)}
                 />
               ))}
             </div>
@@ -151,7 +148,7 @@ interface TaskProgressProps {
   totalPoints: number;
 }
 
-export function TaskProgress({ completed, total, pointsEarned }: TaskProgressProps) {
+export function TaskProgress({ completed, total, pointsEarned, totalPoints }: TaskProgressProps) {
   return (
     <Card className="mb-4">
       <div className="flex items-center justify-between mb-3">
@@ -162,6 +159,9 @@ export function TaskProgress({ completed, total, pointsEarned }: TaskProgressPro
         <div className="flex items-center gap-1">
           <span className="text-primary-500">⭐</span>
           <span className="font-bold text-primary-600">{pointsEarned}</span>
+          {totalPoints !== undefined && (
+            <span className="text-gray-400 text-sm ml-1">/ {totalPoints}</span>
+          )}
         </div>
       </div>
       <Progress value={completed} max={total} showLabel />
@@ -177,11 +177,11 @@ interface TaskTypeBadgeProps {
 
 export function TaskTypeBadge({ type }: TaskTypeBadgeProps) {
   const config = taskTypeConfig[type];
-  const colors: Record<TaskType, string> = {
+  const colors = {
     homework: 'blue',
     practice: 'purple',
     habit: 'success',
-  };
+  } satisfies Record<TaskType, 'blue' | 'purple' | 'success'>;
   
   return (
     <Badge color={colors[type]}>

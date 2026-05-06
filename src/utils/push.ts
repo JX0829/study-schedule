@@ -10,6 +10,7 @@
  * 需要通过代理服务器转发请求
  */
 
+import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from './storage';
 
 // ============ 推送配置类型 ============
@@ -366,8 +367,6 @@ export class PushService {
 export const pushService = new PushService();
 
 // ============ Zustand Store ============
-
-import { create } from 'zustand';
 
 interface PushState {
   config: PushConfig;

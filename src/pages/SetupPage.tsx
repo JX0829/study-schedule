@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { Page, Card, Button, Icon } from '@/components';
+import { Page, Card, Button } from '@/components';
 import { useAppInit } from '@/hooks/useAppInit';
 import { useFamilyStore } from '@/store';
 

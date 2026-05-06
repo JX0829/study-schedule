@@ -105,10 +105,9 @@ interface DateHeaderProps {
   date: string;
   onPrevDay?: () => void;
   onNextDay?: () => void;
-  onToday?: () => void;
 }
 
-export function DateHeader({ date, onPrevDay, onNextDay, onToday }: DateHeaderProps) {
+export function DateHeader({ date, onPrevDay, onNextDay }: DateHeaderProps) {
   const d = new Date(date);
   const weekday = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][d.getDay()];
   const formatted = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;

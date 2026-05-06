@@ -9,6 +9,7 @@ export { useRewardStore } from './reward';
 export { usePasswordStore } from './password';
 export { useTemplateStore } from './template';
 export { usePushStore } from '@/utils/push';
+export { useModuleConfigStore } from './moduleConfig';
 
 /**
  * 初始化所有 Store
@@ -24,6 +25,7 @@ import { useRewardStore } from './reward';
 import { usePasswordStore } from './password';
 import { useTemplateStore } from './template';
 import { usePushStore } from '@/utils/push';
+import { useModuleConfigStore } from './moduleConfig';
 import { initStorage } from '@/utils/storage';
 
 export async function initStores(familyId?: string): Promise<void> {
@@ -39,6 +41,7 @@ export async function initStores(familyId?: string): Promise<void> {
   usePasswordStore.getState().loadFromStorage();
   useTemplateStore.getState().loadFromStorage();
   usePushStore.getState().loadFromStorage();
+  useModuleConfigStore.getState().loadFromStorage();
 
   console.log('✅ All stores initialized');
 }
@@ -52,4 +55,5 @@ export function initStoresSync(): void {
   usePasswordStore.getState().loadFromStorage();
   useTemplateStore.getState().loadFromStorage();
   usePushStore.getState().loadFromStorage();
+  useModuleConfigStore.getState().loadFromStorage();
 }

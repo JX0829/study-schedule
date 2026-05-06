@@ -17,7 +17,7 @@ import { mongoStorage } from './mongoStorage';
 import { hasLocalStorageData, getLocalStorageData } from './migrate';
 
 // 内存缓存
-const memoryCache: Map<string, any> = new Map();
+const memoryCache: Map<string, unknown> = new Map();
 
 // 初始化状态
 let initialized = false;
@@ -44,6 +44,7 @@ export const STORAGE_KEYS = {
   SIGN_PASSWORD_DATE: 'sign_password_date',
   LUCKY_WHEEL_PRIZES: 'lucky_wheel_prizes',
   LUCKY_WHEEL_STATE: 'lucky_wheel_state',
+  MODULE_CONFIG: 'module_config',
 } as const;
 
 /**
@@ -61,7 +62,7 @@ export async function initStorage(familyId: string = 'default'): Promise<void> {
   // 尝试从 MongoDB 加载所有数据
   try {
     const keys = Object.values(STORAGE_KEYS) as string[];
-    const data = await mongoStorage.batchGet<any>(keys);
+    const data = await mongoStorage.batchGet<unknown>(keys);
 
     // 如果 MongoDB 没有数据，尝试从 localStorage 迁移
     if (Object.keys(data).length === 0 && hasLocalStorageData()) {

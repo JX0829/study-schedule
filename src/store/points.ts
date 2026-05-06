@@ -3,7 +3,7 @@
  */
 
 import { create } from 'zustand';
-import type { PointsRecord, ChildPoints, PointsChangeType } from '@/types';
+import type { PointsRecord, ChildPoints } from '@/types';
 import { storage, STORAGE_KEYS } from '@/utils/storage';
 import { generateId } from '@/utils/date';
 import { defaultSystemConfig } from '@/utils/presets';
@@ -33,13 +33,18 @@ export const usePointsStore = create<PointsState>((set, get) => ({
   records: [],
   config: defaultSystemConfig,
 
-  getChildPoints: (childId) => {
+  getChildPoints: (childId): ChildPoints => {
     const existing = get().childPoints.find(p => p.childId === childId);
     if (existing) return existing;
-    return get().initChildPoints(childId);
+    // 初始化新的积分记录
+    const newPoints: ChildPoints = { childId, balance: 0, locked: 0, totalEarned: 0, totalRedeemed: 0 };
+    const childPoints = [...get().childPoints, newPoints];
+    storage.set(STORAGE_KEYS.CHILD_POINTS, childPoints);
+    set({ childPoints });
+    return newPoints;
   },
 
-  initChildPoints: (childId) => {
+  initChildPoints: (childId): ChildPoints => {
     const existing = get().childPoints.find(p => p.childId === childId);
     if (existing) return existing;
     
@@ -74,8 +79,6 @@ export const usePointsStore = create<PointsState>((set, get) => ({
     const actualEarned = newBalance - childPoints.balance;
     
     // 累计获得记录原始积分值（不扣除上限）
-    const originalPoints = points;
-    
     if (actualEarned !== 0) {
       get().addPointsRecord({
         familyId: childPoints.childId, // 简化处理

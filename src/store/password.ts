@@ -92,7 +92,7 @@ export const usePasswordStore = create<PasswordState>((set, get) => ({
 
   verifySignPassword: (password) => {
     const correct = get().getSignPassword();
-    return correct && correct.toUpperCase() === password.toUpperCase();
+    return Boolean(correct && correct.toUpperCase() === password.toUpperCase());
   },
 
   loadFromStorage: () => {

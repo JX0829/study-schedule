@@ -117,8 +117,7 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
 
   // 批量保存任务模板（覆盖已有）
   saveTaskTemplates: (familyId, newTemplates) => {
-    // 删除所有该 familyId 的任务模板
-    const existingTemplates = get().taskTemplates.filter(t => t.familyId === familyId);
+    // 保留其他 familyId 的任务模板，替换当前 familyId 的
     const otherTemplates = get().taskTemplates.filter(t => t.familyId !== familyId);
     
     // 创建新模板

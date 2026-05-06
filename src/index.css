@@ -13,80 +13,19 @@
   }
 }
 
-/* 自定义组件样式 */
+/* 自定义组件样式 - 仅保留 JSX 中实际使用的 .task-item */
 @layer components {
-  /* 卡片样式 */
-  .card {
-    @apply bg-white rounded-2xl shadow-sm p-4 border border-gray-100;
-  }
-  
   /* 任务项样式 */
   .task-item {
     @apply flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors;
   }
-  
+
   .task-item.completed {
     @apply bg-green-50 opacity-60;
   }
-  
+
   .task-item.pending {
     @apply bg-yellow-50;
-  }
-  
-  /* 按钮 */
-  .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors active:scale-95;
-  }
-  
-  .btn-primary {
-    @apply bg-primary-400 text-white hover:bg-primary-500;
-  }
-  
-  .btn-secondary {
-    @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
-  }
-  
-  .btn-success {
-    @apply bg-green-500 text-white hover:bg-green-600;
-  }
-  
-  .btn-danger {
-    @apply bg-red-500 text-white hover:bg-red-600;
-  }
-  
-  /* 进度条 */
-  .progress-bar {
-    @apply h-3 bg-gray-200 rounded-full overflow-hidden;
-  }
-  
-  .progress-fill {
-    @apply h-full bg-gradient-to-r from-primary-400 to-primary-300 rounded-full transition-all duration-500;
-  }
-  
-  /* 积分徽章 */
-  .points-badge {
-    @apply inline-flex items-center px-2 py-1 rounded-full bg-primary-100 text-primary-600 font-bold text-sm;
-  }
-  
-  /* 时间段标签 */
-  .slot-badge {
-    @apply inline-flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-medium;
-  }
-  
-  /* 标签页 */
-  .tab {
-    @apply px-4 py-2 text-gray-500 font-medium;
-  }
-  
-  .tab.active {
-    @apply text-primary-600 border-b-2 border-primary-400;
-  }
-}
-
-/* 移动端优先的响应式调整 */
-@media (min-width: 640px) {
-  .card {
-    @apply p-6;
   }
 }
 

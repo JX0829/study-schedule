@@ -3,7 +3,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { Page, Card, Button, TaskProgress, DateHeader, TabBar, Badge, PointsBadge, Icon, Modal } from '@/components';
+import { Page, Card, Button, TaskProgress, DateHeader, TabBar, Badge, Icon, Modal } from '@/components';
 import { TimePicker } from '@/components/ui/TimePicker';
 import { SignPasswordInput } from '@/components/sign';
 import { LuckyWheel } from '@/components/LuckyWheel';
@@ -41,7 +41,6 @@ export function HomePage() {
   // Store
   const family = useFamilyStore(state => state.family);
   const users = useFamilyStore(state => state.users);
-  const currentUser = useFamilyStore(state => state.currentUser);
   const allTemplates = useTemplateStore(state => state.taskTemplates);
   const rewardTemplates = useTemplateStore(state => state.rewardTemplates);
   
@@ -113,9 +112,9 @@ export function HomePage() {
   // 计算进度
   const progress = useMemo(() => {
     const completed = todayTasks.filter(t => t.status === 'completed').length;
-    // 已完成任务积分（包含正负）
+    // 已完成任务积分（排除额外奖励任务，避免重复计算）
     const taskPointsEarned = todayTasks
-      .filter(t => t.status === 'completed')
+      .filter(t => t.status === 'completed' && !t.isExtraReward)
       .reduce((sum, t) => sum + t.points, 0);
     
     // 获取当天额外奖励积分记录（extra_reward 类型）
@@ -132,8 +131,8 @@ export function HomePage() {
     const pendingPoints = todayTasks
       .filter(t => t.status === 'pending' || t.status === 'submitted')
       .reduce((sum, t) => sum + t.points, 0);
-    // 总分 = 已完成 + 待完成（包含正负积分累加）
-    const totalPoints = taskPointsEarned + pendingPoints;
+    // 总分 = 已完成 + 待完成 + 额外奖励（包含正负积分累加）
+    const totalPoints = taskPointsEarned + pendingPoints + extraRewardPoints;
     return { completed, total: todayTasks.length, pointsEarned, extraRewardPoints, taskPointsEarned, totalPoints, todayExtraRewards };
   }, [todayTasks, child, getPointsRecords, currentDate]);
   
@@ -386,35 +385,40 @@ export function HomePage() {
                 </h3>
                 <div className="space-y-2">
                   {completedTasks.map(task => (
-                    <div key={task.id} className="task-item completed">
+                    <div key={task.id} className={`task-item ${task.isExtraReward ? 'bg-green-50 border-green-200' : 'completed'}`}>
                       <div className="flex items-center gap-3">
-                        <span className="text-xl">✅</span>
+                        <span className="text-xl">{task.isExtraReward ? '🎁' : '✅'}</span>
                         <div className="flex-1">
                           <div className="font-medium text-gray-800">{task.name}</div>
                           <div className="flex items-center gap-2">
                             <Badge color={task.points < 0 ? 'danger' : 'success'}>{task.points}分</Badge>
-                            <span className="text-sm text-gray-500">{task.timeSlotStart}-{task.timeSlotEnd}</span>
+                            {task.isExtraReward && <Badge color="success">家长奖励</Badge>}
+                            {!task.isExtraReward && <span className="text-sm text-gray-500">{task.timeSlotStart}-{task.timeSlotEnd}</span>}
                           </div>
                         </div>
                         <div className="flex gap-1">
-                          <button 
-                            onClick={() => {
-                              setEditingTask(task);
-                              setEditTaskPoints(String(task.points));
-                            }}
-                            className="p-1.5 text-gray-500 hover:text-gray-700"
-                          >
-                            ✏️
-                          </button>
-                          <button 
-                            onClick={() => {
-                              // 删除：改回待完成状态，积分会从已完成中移除
-                              updateDailyTaskStatus(task.id, 'pending');
-                            }}
-                            className="p-1.5 text-gray-500 hover:text-red-600"
-                          >
-                            🗑️
-                          </button>
+                          {!task.isExtraReward && (
+                            <button 
+                              onClick={() => {
+                                setEditingTask(task);
+                                setEditTaskPoints(String(task.points));
+                              }}
+                              className="p-1.5 text-gray-500 hover:text-gray-700"
+                            >
+                              ✏️
+                            </button>
+                          )}
+                          {!task.isExtraReward && (
+                            <button 
+                              onClick={() => {
+                                // 删除：改回待完成状态，积分会从已完成中移除
+                                updateDailyTaskStatus(task.id, 'pending');
+                              }}
+                              className="p-1.5 text-gray-500 hover:text-red-600"
+                            >
+                              🗑️
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

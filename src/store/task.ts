@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import type { TaskTemplate, TimeSlot, DailyTask, TaskStatus } from '@/types';
 import { storage, STORAGE_KEYS } from '@/utils/storage';
-import { generateId, formatDate, getToday } from '@/utils/date';
+import { generateId, formatDate } from '@/utils/date';
 import { defaultTimeSlots } from '@/utils/presets';
 import { pushService } from '@/utils/push';
 import { useFamilyStore } from './family';

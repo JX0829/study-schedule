@@ -75,6 +75,7 @@ export interface DailyTask {
   autoConfirmed: boolean;
   rejectedReason?: string;
   createdAt: string;
+  isExtraReward?: boolean; // 标识是否为家长额外发放的奖励
 }
 
 // ============ 积分系统 ============
@@ -172,4 +173,12 @@ export interface WeeklyStats {
   completionRate: number;
   totalPoints: number;
   dailyStats: DailyStats[];
+}
+
+// ============ 模块配置 ============
+
+export interface ModuleConfig {
+  tasks: boolean;      // 任务模块
+  points: boolean;     // 积分模块
+  rewards: boolean;    // 奖励/抽奖模块
 }

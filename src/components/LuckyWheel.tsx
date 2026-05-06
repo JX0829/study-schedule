@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, Button, Badge } from '@/components';
+import { Card } from '@/components';
 import { usePointsStore, useFamilyStore } from '@/store';
 import { storage, STORAGE_KEYS } from '@/utils/storage';
 import { getToday } from '@/utils/date';

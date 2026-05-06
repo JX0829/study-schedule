@@ -16,7 +16,7 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 
 // MongoDB 连接配置
-const MONGO_URL = process.env.MONGO_URL || 'mongodb://192.168.31.170:27017';
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017';
 const DB_NAME = 'studyplan';
 const COLLECTION_NAME = 'storage';
 

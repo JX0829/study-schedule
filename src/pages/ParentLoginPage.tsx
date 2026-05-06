@@ -21,13 +21,20 @@ export function ParentLoginPage({ onLogin }: ParentLoginProps) {
   const loadFromStorage = usePasswordStore(state => state.loadFromStorage);
 
   useEffect(() => {
+    // 仅挂载时运行一次，检查是否有已有密码
     loadFromStorage();
+    // loadFromStorage 后 parentPassword 会被更新，但需要在下一次渲染中生效
+    // 这里检查的是初始值，后续通过 store 订阅更新
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 当 parentPassword 从 store 加载完成后，更新步骤
+  useEffect(() => {
     if (parentPassword) {
       setStep('login');
     } else {
       setStep('create');
     }
-  }, []);
+  }, [parentPassword]);
 
   // 创建密码
   const handleCreatePassword = () => {

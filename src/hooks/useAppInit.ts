@@ -2,18 +2,21 @@
  * 应用初始化 Hook
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { initStores } from '@/store';
 import { useFamilyStore, useTaskStore } from '@/store';
 
 export function useAppInit() {
+  const [isLoading, setIsLoading] = useState(true);
   const family = useFamilyStore(state => state.family);
   const initFamily = useFamilyStore(state => state.initFamily);
   const addUser = useFamilyStore(state => state.addUser);
   const initDefaultTimeSlots = useTaskStore(state => state.initDefaultTimeSlots);
 
   useEffect(() => {
-    initStores();
+    initStores().then(() => {
+      setIsLoading(false);
+    });
   }, []);
 
   const needsSetup = !family;
@@ -41,5 +44,5 @@ export function useAppInit() {
     return child;
   };
 
-  return { needsSetup, setupFamily, family };
+  return { needsSetup, setupFamily, family, isLoading };
 }

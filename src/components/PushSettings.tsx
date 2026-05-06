@@ -22,12 +22,6 @@ export const PushSettings: React.FC = () => {
     loadFromStorage();
   }, []);
 
-  const handleSaveKey = () => {
-    setPushKey(pushKeyInput);
-    setProxyUrl(proxyUrlInput);
-    setTestResult(null);
-  };
-
   const handleTestPush = async () => {
     if (!pushKeyInput) {
       setTestResult({ success: false, message: '请先输入推送密钥' });

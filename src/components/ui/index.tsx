@@ -258,7 +258,7 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
 // ============ Tabs 组件 ============
 
 interface TabsProps {
-  tabs: Array<{ key: string; label: string }>;
+  tabs: Array<{ key: string; label: string; badge?: number }>;
   activeKey: string;
   onChange: (key: string) => void;
 }
@@ -269,7 +269,7 @@ export function Tabs({ tabs, activeKey, onChange }: TabsProps) {
       {tabs.map(tab => (
         <button
           key={tab.key}
-          className={`px-4 py-2 font-medium transition-colors ${
+          className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
             activeKey === tab.key
               ? 'text-primary-600 border-b-2 border-primary-400'
               : 'text-gray-500 hover:text-gray-700'
@@ -277,6 +277,11 @@ export function Tabs({ tabs, activeKey, onChange }: TabsProps) {
           onClick={() => onChange(tab.key)}
         >
           {tab.label}
+          {tab.badge && (
+            <span className="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">
+              {tab.badge}
+            </span>
+          )}
         </button>
       ))}
     </div>

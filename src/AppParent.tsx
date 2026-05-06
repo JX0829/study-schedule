@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { SetupPage, ParentPage, ParentLoginPage } from '@/pages';
+import { ErrorBoundary } from '@/components';
 import { useAppInit } from '@/hooks/useAppInit';
 
 function AppParent() {
@@ -28,7 +29,11 @@ function AppParent() {
   }
 
   // 进入家长端
-  return <ParentPage />;
+  return (
+    <ErrorBoundary>
+      <ParentPage />
+    </ErrorBoundary>
+  );
 }
 
 export default AppParent;
