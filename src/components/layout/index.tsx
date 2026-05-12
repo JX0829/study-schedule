@@ -68,6 +68,7 @@ interface TabBarItem {
   key: string;
   label: string;
   icon: string;
+  badge?: number;
 }
 
 interface TabBarProps {
@@ -83,14 +84,21 @@ export function TabBar({ items, activeKey, onChange }: TabBarProps) {
         {items.map(item => (
           <button
             key={item.key}
-            className={`flex flex-col items-center py-1 px-3 ${
+            className={`flex flex-col items-center py-1 px-3 relative ${
               activeKey === item.key 
                 ? 'text-primary-500' 
                 : 'text-gray-400'
             }`}
             onClick={() => onChange(item.key)}
           >
-            <Icon name={item.icon} size={24} />
+            <div className="relative">
+              <Icon name={item.icon} size={24} />
+              {item.badge && item.badge > 0 && (
+                <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center">
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
+              )}
+            </div>
             <span className="text-xs mt-1">{item.label}</span>
           </button>
         ))}

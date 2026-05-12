@@ -25,6 +25,7 @@ interface PointsState {
   initChildPoints: (childId: string) => void;
   addExtraReward: (childId: string, points: number, description: string) => void;
   addExtraPenalty: (childId: string, points: number, description: string) => void;
+  reverseExtraTransaction: (childId: string, taskPoints: number, taskDescription: string) => void;
   loadFromStorage: () => void;
 }
 
@@ -240,6 +241,54 @@ export const usePointsStore = create<PointsState>((set, get) => ({
 
     // 推送通知
     pushService.notifyExtraPenalty(description, points);
+  },
+
+  // 删除额外奖励/惩罚时回退积分
+  reverseExtraTransaction: (childId, taskPoints, taskDescription) => {
+    const childPoints = get().getChildPoints(childId);
+    
+    if (taskPoints > 0) {
+      // 回退奖励：减少 balance 和 totalEarned
+      const newBalance = childPoints.balance - taskPoints;
+      get().addPointsRecord({
+        familyId: childPoints.childId,
+        childId,
+        changeType: 'extra_penalty',
+        points: -taskPoints,
+        balanceAfter: newBalance,
+        lockedPoints: childPoints.locked,
+        description: `删除奖励: ${taskDescription}`,
+      });
+
+      const updated = get().childPoints.map(p => 
+        p.childId === childId 
+          ? { ...p, balance: newBalance, totalEarned: Math.max(0, p.totalEarned - taskPoints) }
+          : p
+      );
+      storage.set(STORAGE_KEYS.CHILD_POINTS, updated);
+      set({ childPoints: updated });
+    } else {
+      // 回退惩罚：增加 balance
+      const penaltyPoints = Math.abs(taskPoints);
+      const newBalance = childPoints.balance + penaltyPoints;
+      get().addPointsRecord({
+        familyId: childPoints.childId,
+        childId,
+        changeType: 'extra_reward',
+        points: penaltyPoints,
+        balanceAfter: newBalance,
+        lockedPoints: childPoints.locked,
+        description: `删除惩罚: ${taskDescription}`,
+      });
+
+      const updated = get().childPoints.map(p => 
+        p.childId === childId 
+          ? { ...p, balance: newBalance }
+          : p
+      );
+      storage.set(STORAGE_KEYS.CHILD_POINTS, updated);
+      set({ childPoints: updated });
+    }
   },
 
   loadFromStorage: () => {

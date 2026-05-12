@@ -50,6 +50,27 @@ export function HomePage() {
     return allTemplates.filter(t => t.familyId === family.id);
   }, [allTemplates, family?.id]);
   
+  // 跨 Tab 数据同步：家长在另一个 Tab 操作后，孩子端自动刷新
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key && (
+        e.key.includes('redemption_records') ||
+        e.key.includes('daily_tasks') ||
+        e.key.includes('child_points') ||
+        e.key.includes('points_records')
+      )) {
+        console.log('🔄 检测到家长端数据变更，刷新孩子端:', e.key);
+        setTimeout(() => {
+          useTaskStore.getState().loadFromStorage();
+          usePointsStore.getState().loadFromStorage();
+          useRewardStore.getState().loadFromStorage();
+        }, 100);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // 启动任务提醒服务
   useEffect(() => {
     startTaskReminder();
@@ -91,6 +112,10 @@ export function HomePage() {
   // 兑换积分
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [redeemPoints, setRedeemPoints] = useState('');
+  
+  // 兑换记录
+  const redemptionRecords = useRewardStore(state => state.redemptionRecords);
+  const getRedemptionsByChild = useRewardStore(state => state.getRedemptionsByChild);
   
   // 积分记录时间范围
   const [recordDays, setRecordDays] = useState(7);
@@ -245,11 +270,24 @@ export function HomePage() {
     setSelectedTaskId(null);
   };
 
+  // 当前孩子的兑换记录
+  const childRedemptions = useMemo(() => {
+    if (!child) return [];
+    return getRedemptionsByChild(child.id).sort(
+      (a, b) => new Date(b.lockedAt).getTime() - new Date(a.lockedAt).getTime()
+    );
+  }, [child, redemptionRecords, getRedemptionsByChild]);
+
+  const pendingRedemptionsCount = useMemo(() =>
+    childRedemptions.filter(r => r.status === 'pending').length,
+    [childRedemptions]
+  );
+
   // TabBar 配置
   const tabBarItems = [
     { key: 'tasks', label: '任务', icon: 'calendar' },
     { key: 'points', label: '积分', icon: 'star' },
-    { key: 'rewards', label: '奖励', icon: 'gift' },
+    { key: 'rewards', label: '奖励', icon: 'gift', badge: pendingRedemptionsCount },
   ];
 
   return (
@@ -537,6 +575,19 @@ export function HomePage() {
                   <Button className="mt-4" onClick={() => setShowRedeemModal(true)}>
                     💰 申请兑换积分
                   </Button>
+
+                  {/* 待审批兑换提醒 */}
+                  {pendingRedemptionsCount > 0 && (
+                    <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                      <button
+                        className="w-full text-left text-sm text-yellow-700"
+                        onClick={() => setActiveTab('rewards')}
+                      >
+                        ⏳ 有 <span className="font-bold">{pendingRedemptionsCount}</span> 条兑换申请待审批
+                        <span className="text-yellow-500 ml-1">→ 查看详情</span>
+                      </button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-gray-400">暂无积分数据</div>
@@ -616,8 +667,76 @@ export function HomePage() {
 
       {/* 奖励内容 */}
       {activeTab === 'rewards' && (
-        <div className="max-w-lg mx-auto px-4 py-4">
+        <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
           <LuckyWheel />
+
+          {/* 兑换状态 */}
+          {childRedemptions.length > 0 && (
+            <Card>
+              <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <Icon name="gift" size={18} />
+                兑换记录
+              </h3>
+              <div className="space-y-2">
+                {childRedemptions.map(r => {
+                  const reward = useRewardStore.getState().rewards.find(rw => rw.id === r.rewardId);
+                  const statusConfig = {
+                    pending: { label: '待审批', color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: '⏳' },
+                    approved: { label: '已批准', color: 'bg-green-100 text-green-700 border-green-200', icon: '✅' },
+                    rejected: { label: '已驳回', color: 'bg-red-100 text-red-700 border-red-200', icon: '❌' },
+                  };
+                  const cfg = statusConfig[r.status] || statusConfig.pending;
+                  const rewardName = r.rewardId === 'custom_points'
+                    ? `${r.pointsCost}积分`
+                    : reward?.name || '未知奖励';
+                  return (
+                    <div key={r.id} className={`rounded-lg p-3 border ${cfg.color}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span>{cfg.icon}</span>
+                          <span className="font-medium">{rewardName}</span>
+                        </div>
+                        <Badge color={
+                          r.status === 'approved' ? 'success' :
+                          r.status === 'rejected' ? 'danger' : 'primary'
+                        } size="sm">
+                          {cfg.label}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        申请时间：{new Date(r.lockedAt).toLocaleString('zh-CN')}
+                      </div>
+                      {r.status === 'rejected' && r.rejectedReason && (
+                        <div className="text-xs text-red-600 mt-1">
+                          驳回原因：{r.rejectedReason}
+                        </div>
+                      )}
+                      {r.status === 'approved' && r.confirmedAt && (
+                        <div className="text-xs text-green-600 mt-1">
+                          批准时间：{new Date(r.confirmedAt).toLocaleString('zh-CN')}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* 兑换积分入口 */}
+          {childPoints && (
+            <Card className="text-center">
+              <div className="py-3">
+                <div className="text-sm text-gray-500 mb-2">可用积分</div>
+                <div className="text-3xl font-bold text-primary-600 mb-3">
+                  {childPoints.balance - childPoints.locked}
+                </div>
+                <Button onClick={() => setShowRedeemModal(true)}>
+                  💰 申请兑换积分
+                </Button>
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
