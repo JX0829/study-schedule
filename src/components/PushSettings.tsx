@@ -94,19 +94,19 @@ export const PushSettings: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="cosmic-glass p-6 text-white">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
           📬 推送设置
         </h2>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">推送服务</span>
+          <span className="text-sm text-slate-300">推送服务</span>
           <button
             onClick={() => setEnabled(!config.enabled)}
             className={`px-3 py-1 rounded-full text-sm font-medium transition ${
               config.enabled 
-                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]' 
+                : 'bg-slate-800 text-slate-400 border border-slate-700'
             }`}
           >
             {config.enabled ? '已启用' : '已禁用'}
@@ -115,12 +115,12 @@ export const PushSettings: React.FC = () => {
       </div>
 
       {/* PushMe 说明 */}
-      <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-        <p className="text-sm text-blue-800 mb-2">
+      <div className="mb-6 p-4 bg-sky-950/40 border border-sky-500/30 rounded-xl">
+        <p className="text-sm text-sky-200 mb-2">
           <strong>PushMe</strong> 是一个简单轻量的 Android 消息推送客户端。
         </p>
-        <div className="text-xs text-blue-600 space-y-1">
-          <p>📱 1. 在手机上安装 <a href="https://push.i-i.me" target="_blank" rel="noopener noreferrer" className="underline font-medium">PushMe App</a></p>
+        <div className="text-xs text-sky-300 space-y-1">
+          <p>📱 1. 在手机上安装 <a href="https://push.i-i.me" target="_blank" rel="noopener noreferrer" className="underline font-medium text-cyan-300">PushMe App</a></p>
           <p>🔑 2. 在 App 中获取推送密钥 (push_key)</p>
           <p>✅ 3. 在下方输入密钥，点击"测试"按钮</p>
           <p>🔔 4. 测试成功后密钥自动保存，启用推送即可</p>
@@ -129,7 +129,7 @@ export const PushSettings: React.FC = () => {
 
       {/* 密钥配置 */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-slate-200 mb-2">
           推送密钥 (push_key)
         </label>
         <input
@@ -137,13 +137,13 @@ export const PushSettings: React.FC = () => {
           value={pushKeyInput}
           onChange={(e) => setPushKeyInput(e.target.value)}
           placeholder="请输入 PushMe App 中获取的密钥"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-sky-500/30 bg-[#0B132B]/80 text-white placeholder-slate-400 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
         />
       </div>
 
       {/* 代理配置 */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-slate-200 mb-2">
           代理服务器地址（必填）
         </label>
         <input
@@ -151,9 +151,9 @@ export const PushSettings: React.FC = () => {
           value={proxyUrlInput}
           onChange={(e) => setProxyUrlInput(e.target.value)}
           placeholder="例如: https://push-proxy.xxx.workers.dev"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-sky-500/30 bg-[#0B132B]/80 text-white placeholder-slate-400 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-slate-400">
           💡 需要部署 Cloudflare Workers 代理，详见下方说明
         </p>
       </div>
@@ -163,39 +163,41 @@ export const PushSettings: React.FC = () => {
         <button
           onClick={handleTestPush}
           disabled={testing || !pushKeyInput || !proxyUrlInput}
-          className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition font-medium"
+          className="w-full px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed transition font-medium shadow-[0_0_15px_rgba(16,185,129,0.3)]"
         >
           {testing ? '⏳ 测试中...' : '🧪 测试推送'}
         </button>
         {testResult && (
-          <div className={`mt-2 p-3 rounded-lg text-sm ${
-            testResult.success ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'
+          <div className={`mt-2 p-3 rounded-lg text-sm border ${
+            testResult.success 
+              ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40' 
+              : 'bg-rose-950/60 text-rose-300 border-rose-500/40'
           }`}>
             {testResult.success ? '✅ ' : '❌ '}{testResult.message}
           </div>
         )}
         {config.pushKey && !testResult && (
-          <div className="mt-2 p-2 bg-gray-100 rounded text-sm text-gray-600">
-            当前已保存密钥: <span className="font-mono">{config.pushKey.substring(0, 8)}...</span>
+          <div className="mt-2 p-3 bg-slate-900/80 border border-slate-700/60 rounded-lg text-sm text-slate-300">
+            当前已保存密钥: <span className="font-mono text-cyan-300">{config.pushKey.substring(0, 8)}...</span>
             <br />
-            当前代理: <span className="font-mono">{config.proxyUrl}</span>
+            当前代理: <span className="font-mono text-cyan-300">{config.proxyUrl}</span>
           </div>
         )}
       </div>
 
       {/* 推送场景配置 */}
       <div className="mb-6">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">推送场景</h3>
+        <h3 className="text-sm font-medium text-slate-200 mb-3">推送场景</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {(Object.keys(config.scenarios) as (keyof PushScenarios)[]).map((scenario) => {
             const { label, desc, icon } = scenarioLabels[scenario];
             return (
               <label
                 key={scenario}
-                className={`flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer ${
+                className={`flex items-center gap-3 p-3 rounded-xl border transition cursor-pointer ${
                   config.scenarios[scenario]
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                    ? 'border-cyan-500/60 bg-cyan-950/40 shadow-[0_0_12px_rgba(0,240,255,0.15)]'
+                    : 'border-slate-800 bg-slate-900/60 hover:bg-slate-800/60'
                 }`}
               >
                 <input
@@ -203,12 +205,12 @@ export const PushSettings: React.FC = () => {
                   checked={config.scenarios[scenario]}
                   onChange={(e) => handleScenarioChange(scenario, e.target.checked)}
                   disabled={!config.enabled || !config.pushKey}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500 disabled:opacity-50"
+                  className="w-4 h-4 rounded border-sky-500/30 bg-[#0B132B]/80 text-cyan-500 focus:ring-cyan-500 disabled:opacity-50"
                 />
                 <span className="text-xl">{icon}</span>
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-800">{label}</div>
-                  <div className="text-xs text-gray-500">{desc}</div>
+                  <div className="text-sm font-medium text-white">{label}</div>
+                  <div className="text-xs text-slate-400">{desc}</div>
                 </div>
               </label>
             );
@@ -217,18 +219,18 @@ export const PushSettings: React.FC = () => {
       </div>
 
       {/* 当前状态 */}
-      <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
+      <div className="p-4 bg-slate-900/80 border border-slate-700/60 rounded-xl text-sm text-slate-300">
         <div className="flex items-center gap-2 mb-1">
-          <span className="font-medium">当前状态:</span>
+          <span className="font-medium text-white">当前状态:</span>
           {config.enabled && config.pushKey ? (
-            <span className="text-green-600 font-medium">✓ 推送服务已启用</span>
+            <span className="text-emerald-400 font-medium">✓ 推送服务已启用</span>
           ) : config.pushKey ? (
-            <span className="text-yellow-600">○ 已配置密钥，请启用推送</span>
+            <span className="text-amber-400">○ 已配置密钥，请启用推送</span>
           ) : (
-            <span className="text-gray-500">○ 推送服务未配置</span>
+            <span className="text-slate-400">○ 推送服务未配置</span>
           )}
         </div>
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-slate-400">
           启用场景: {
             Object.entries(config.scenarios).filter(([_, v]) => v).length
           } / {Object.keys(config.scenarios).length}
@@ -236,15 +238,15 @@ export const PushSettings: React.FC = () => {
       </div>
 
       {/* 技术说明 */}
-      <div className="mt-4 p-4 bg-yellow-50 rounded-lg text-xs text-yellow-700">
-        <p className="font-bold mb-2">💡 如何部署 Cloudflare Workers 代理：</p>
-        <ol className="space-y-1 list-decimal list-inside">
-          <li>打开 <a href="https://dash.cloudflare.com" target="_blank" className="underline font-medium">Cloudflare Dashboard</a></li>
+      <div className="mt-4 p-4 bg-amber-950/30 border border-amber-500/30 rounded-xl text-xs text-amber-200">
+        <p className="font-bold mb-2 text-amber-300">💡 如何部署 Cloudflare Workers 代理：</p>
+        <ol className="space-y-1 list-decimal list-inside text-amber-200/90">
+          <li>打开 <a href="https://dash.cloudflare.com" target="_blank" className="underline font-medium text-amber-300">Cloudflare Dashboard</a></li>
           <li>左侧菜单 → Workers & Pages → Create Worker</li>
           <li>输入名称（如 push-proxy），点击 Deploy</li>
           <li>点击 Edit code，粘贴以下代码：</li>
         </ol>
-        <pre className="mt-2 p-2 bg-yellow-100 rounded text-xs overflow-x-auto">
+        <pre className="mt-2 p-2 bg-slate-950/90 border border-slate-800 rounded-lg text-xs overflow-x-auto text-cyan-300 font-mono">
 {`export default {
   async fetch(request) {
     if (request.method === 'OPTIONS')

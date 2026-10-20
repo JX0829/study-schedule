@@ -1,13 +1,9 @@
 /**
- * 基础 UI 组件
- * 
- * 设计原则：
- * - 简洁易用
- * - 小程序迁移友好（避免复杂 DOM 操作）
- * - 通过 props 控制，状态驱动渲染
+ * 基础 UI 组件 - 科技宇宙 (Sci-Fi Cosmic) 风格
  */
 
 import type { ReactNode, ButtonHTMLAttributes } from 'react';
+import { IconEnergyCrystal } from '@/components/icons/CosmicIcons';
 
 // ============ Button 组件 ============
 
@@ -28,20 +24,20 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const baseClass = 'inline-flex items-center justify-center font-medium transition-colors active:scale-95 rounded-lg';
+  const baseClass = 'inline-flex items-center justify-center font-bold tracking-wide transition-all duration-200 active:scale-95 rounded-xl cursor-pointer disabled:cursor-not-allowed select-none';
   
   const variantClasses = {
-    primary: 'bg-primary-400 text-white hover:bg-primary-500 disabled:bg-primary-200',
-    secondary: 'bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:bg-gray-100',
-    success: 'bg-green-500 text-white hover:bg-green-600 disabled:bg-green-200',
-    danger: 'bg-red-500 text-white hover:bg-red-600 disabled:bg-red-200',
-    ghost: 'bg-transparent text-gray-600 hover:bg-gray-100',
+    primary: 'cosmic-glow-btn disabled:opacity-40 disabled:transform-none disabled:shadow-none',
+    secondary: 'bg-slate-800/80 hover:bg-slate-700/80 text-white border border-sky-500/30 hover:border-cyan-400 disabled:opacity-40',
+    success: 'bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 shadow-[0_0_18px_rgba(16,185,129,0.35)] disabled:opacity-40',
+    danger: 'bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white shadow-[0_0_18px_rgba(244,63,94,0.35)] disabled:opacity-40',
+    ghost: 'bg-transparent text-slate-300 hover:bg-slate-800/60 hover:text-cyan-300',
   };
   
   const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+    sm: 'px-3 py-1.5 text-xs',
+    md: 'px-4 py-2.5 text-sm',
+    lg: 'px-6 py-3.5 text-base',
   };
 
   return (
@@ -51,7 +47,7 @@ export function Button({
       {...props}
     >
       {loading && <span className="animate-spin mr-2">⏳</span>}
-      {icon && <span className="mr-2">{icon}</span>}
+      {icon && <span className="mr-2 flex items-center">{icon}</span>}
       {children}
     </button>
   );
@@ -69,13 +65,15 @@ interface CardProps {
 export function Card({ children, className = '', padding = 'md', onClick }: CardProps) {
   const paddingClasses = {
     sm: 'p-3',
-    md: 'p-4',
-    lg: 'p-6',
+    md: 'p-4 sm:p-5',
+    lg: 'p-5 sm:p-7',
   };
 
   return (
     <div
-      className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${paddingClasses[padding]} ${className} ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+      className={`cosmic-glass text-white ${paddingClasses[padding]} ${className} ${
+        onClick ? 'cursor-pointer hover:border-cyan-400/60 hover:shadow-[0_12px_40px_rgba(0,240,255,0.15)]' : ''
+      }`}
       onClick={onClick}
     >
       {children}
@@ -83,7 +81,7 @@ export function Card({ children, className = '', padding = 'md', onClick }: Card
   );
 }
 
-// ============ Progress 组件 ============
+// ============ Progress 组件 (火箭推进充能槽) ============
 
 interface ProgressProps {
   value: number; // 0-100
@@ -97,9 +95,9 @@ export function Progress({ value, max = 100, showLabel = false, color = 'primary
   const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
   
   const colorClasses = {
-    primary: 'from-primary-400 to-primary-300',
-    success: 'from-green-500 to-green-400',
-    blue: 'from-blue-500 to-blue-400',
+    primary: 'from-cyan-400 via-sky-400 to-indigo-500 shadow-[0_0_12px_#00F0FF]',
+    success: 'from-emerald-400 via-teal-400 to-cyan-400 shadow-[0_0_12px_#10B981]',
+    blue: 'from-blue-500 via-indigo-500 to-purple-500 shadow-[0_0_12px_#6366F1]',
   };
   
   const sizeClasses = {
@@ -111,19 +109,23 @@ export function Progress({ value, max = 100, showLabel = false, color = 'primary
   return (
     <div className="w-full">
       {showLabel && (
-        <div className="flex justify-between text-sm text-gray-600 mb-1">
-          <span>{value}</span>
-          <span>{max}</span>
+        <div className="flex justify-between text-xs font-orbitron text-slate-300 mb-1.5">
+          <span className="text-cyan-400">{value}</span>
+          <span className="text-slate-400">{max}</span>
         </div>
       )}
-      <div className={`w-full bg-gray-200 rounded-full overflow-hidden ${sizeClasses[size]}`}>
+      <div className={`w-full bg-slate-900/90 rounded-full overflow-hidden p-0.5 border border-sky-500/25 ${sizeClasses[size]}`}>
         <div
-          className={`h-full bg-gradient-to-r ${colorClasses[color]} rounded-full transition-all duration-500`}
+          className={`h-full bg-gradient-to-r ${colorClasses[color]} rounded-full transition-all duration-700 relative`}
           style={{ width: `${percentage}%` }}
-        />
+        >
+          {percentage > 10 && (
+            <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/80 rounded-full blur-[1px] animate-pulse"></div>
+          )}
+        </div>
       </div>
       {showLabel && (
-        <div className="text-center text-sm text-gray-500 mt-1">
+        <div className="text-right text-xs font-orbitron text-cyan-300 mt-1 font-bold">
           {Math.round(percentage)}%
         </div>
       )}
@@ -141,12 +143,12 @@ interface BadgeProps {
 
 export function Badge({ children, color = 'primary', size = 'sm' }: BadgeProps) {
   const colorClasses = {
-    primary: 'bg-primary-100 text-primary-600',
-    success: 'bg-green-100 text-green-600',
-    danger: 'bg-red-100 text-red-600',
-    gray: 'bg-gray-100 text-gray-600',
-    blue: 'bg-blue-100 text-blue-600',
-    purple: 'bg-purple-100 text-purple-600',
+    primary: 'bg-cyan-950/70 text-cyan-300 border border-cyan-500/40 shadow-[0_0_10px_rgba(0,240,255,0.15)]',
+    success: 'bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.15)]',
+    danger: 'bg-rose-950/70 text-rose-300 border border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.15)]',
+    gray: 'bg-slate-800/80 text-slate-300 border border-slate-700/60',
+    blue: 'bg-sky-950/70 text-sky-300 border border-sky-500/40 shadow-[0_0_10px_rgba(56,189,248,0.15)]',
+    purple: 'bg-purple-950/70 text-purple-300 border border-purple-500/40 shadow-[0_0_10px_rgba(168,85,247,0.15)]',
   };
   
   const sizeClasses = {
@@ -155,13 +157,13 @@ export function Badge({ children, color = 'primary', size = 'sm' }: BadgeProps) 
   };
 
   return (
-    <span className={`inline-flex items-center rounded-full font-medium ${colorClasses[color]} ${sizeClasses[size]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-lg font-medium tracking-wide ${colorClasses[color]} ${sizeClasses[size]}`}>
       {children}
     </span>
   );
 }
 
-// ============ PointsBadge 组件 ============
+// ============ PointsBadge 组件 (星能晶石显示徽章) ============
 
 interface PointsBadgeProps {
   points: number;
@@ -171,16 +173,17 @@ interface PointsBadgeProps {
 
 export function PointsBadge({ points, locked = 0, size = 'md' }: PointsBadgeProps) {
   const sizeClasses = {
-    sm: 'px-2 py-1 text-sm',
-    md: 'px-3 py-1.5 text-base',
-    lg: 'px-4 py-2 text-lg',
+    sm: 'px-2.5 py-1 text-xs',
+    md: 'px-3.5 py-1.5 text-sm',
+    lg: 'px-5 py-2.5 text-base',
   };
 
   return (
-    <div className={`inline-flex items-center gap-1 rounded-full bg-primary-100 ${sizeClasses[size]}`}>
-      <span className="text-primary-600 font-bold">⭐ {points}</span>
+    <div className={`inline-flex items-center gap-1.5 rounded-xl bg-slate-900/90 border border-amber-500/40 shadow-[0_0_15px_rgba(251,191,36,0.2)] ${sizeClasses[size]}`}>
+      <IconEnergyCrystal size={size === 'lg' ? 22 : 18} />
+      <span className="text-amber-300 font-orbitron font-bold tracking-wider">{points}</span>
       {locked > 0 && (
-        <span className="text-gray-500 text-xs">({locked}锁定)</span>
+        <span className="text-slate-400 text-xs font-orbitron">({locked}锁)</span>
       )}
     </div>
   );
@@ -197,11 +200,11 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-8 text-center">
+    <div className="flex flex-col items-center justify-center py-12 text-center cosmic-glass-subtle my-4">
       {icon && <div className="text-4xl mb-3">{icon}</div>}
-      <h3 className="text-gray-600 font-medium">{title}</h3>
-      {description && <p className="text-gray-400 text-sm mt-1">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
+      <h3 className="text-white font-semibold tracking-wide text-base">{title}</h3>
+      {description && <p className="text-slate-300 text-xs mt-1.5 max-w-sm px-4">{description}</p>}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }
@@ -220,33 +223,34 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* 背景遮罩 */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div 
-        className="absolute inset-0 bg-black/50" 
+        className="absolute inset-0 bg-[#070B19]/80 backdrop-blur-md transition-opacity" 
         onClick={onClose}
       />
       
-      {/* 内容区 */}
-      <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-auto">
+      <div className="relative bg-[#0F172A] border border-cyan-500/30 rounded-2xl shadow-[0_0_50px_rgba(0,240,255,0.2)] max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col text-white animate-in fade-in zoom-in-95 duration-200">
         {title && (
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="font-medium text-lg">{title}</h3>
+          <div className="px-5 py-4 border-b border-sky-500/20 flex items-center justify-between bg-slate-900/60">
+            <h3 className="font-bold text-base text-white flex items-center gap-2 font-orbitron tracking-wide">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#00F0FF]"></span>
+              {title}
+            </h3>
             <button 
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-1"
+              className="text-slate-400 hover:text-cyan-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
             >
               ✕
             </button>
           </div>
         )}
         
-        <div className="p-4">
+        <div className="p-5 overflow-y-auto space-y-4">
           {children}
         </div>
         
         {footer && (
-          <div className="px-4 py-3 border-t border-gray-100 flex justify-end gap-2">
+          <div className="px-5 py-3 border-t border-sky-500/20 bg-slate-900/80 flex justify-end gap-2.5">
             {footer}
           </div>
         )}
@@ -265,30 +269,33 @@ interface TabsProps {
 
 export function Tabs({ tabs, activeKey, onChange }: TabsProps) {
   return (
-    <div className="flex border-b border-gray-200">
-      {tabs.map(tab => (
-        <button
-          key={tab.key}
-          className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${
-            activeKey === tab.key
-              ? 'text-primary-600 border-b-2 border-primary-400'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-          onClick={() => onChange(tab.key)}
-        >
-          {tab.label}
-          {tab.badge && (
-            <span className="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">
-              {tab.badge}
-            </span>
-          )}
-        </button>
-      ))}
+    <div className="flex border-b border-sky-500/20 space-x-1.5">
+      {tabs.map(tab => {
+        const isActive = activeKey === tab.key;
+        return (
+          <button
+            key={tab.key}
+            className={`px-4 py-2.5 text-xs font-bold tracking-wider transition-all duration-200 whitespace-nowrap rounded-t-xl relative ${
+              isActive
+                ? 'text-cyan-300 border-b-2 border-cyan-400 bg-cyan-950/30 shadow-[inset_0_2px_8px_rgba(0,240,255,0.15)]'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/30'
+            }`}
+            onClick={() => onChange(tab.key)}
+          >
+            {tab.label}
+            {tab.badge && (
+              <span className="ml-1.5 px-1.5 py-0.2 text-[10px] font-orbitron bg-rose-500 text-white rounded-full">
+                {tab.badge}
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-// ============ PointsSlider 组件（积分范围选择 -50 到 50）============
+// ============ PointsSlider 组件 ============
 
 interface PointsSliderProps {
   value: number;
@@ -305,23 +312,20 @@ export function PointsSlider({
   min = -50,
   max = 50,
   showQuickSelect = true,
-  label = '积分'
+  label = '星能配比'
 }: PointsSliderProps) {
-  // 快速选择按钮的常用值
   const quickValues = [-50, -20, -10, -5, 0, 5, 10, 20, 50];
   
-  // 根据值显示颜色
   const getValueColor = (val: number) => {
-    if (val > 0) return 'text-green-600 bg-green-100';
-    if (val < 0) return 'text-red-600 bg-red-100';
-    return 'text-gray-600 bg-gray-100';
+    if (val > 0) return 'text-emerald-300 bg-emerald-950/70 border border-emerald-500/40';
+    if (val < 0) return 'text-rose-300 bg-rose-950/70 border border-rose-500/40';
+    return 'text-slate-300 bg-slate-800 border border-slate-700';
   }; 
 
   return (
-    <div className="space-y-3">
-      {label && <label className="text-gray-500 text-sm">{label}</label>}
+    <div className="space-y-3 cosmic-glass-subtle p-4 rounded-xl">
+      {label && <label className="text-slate-300 text-xs font-bold tracking-wider uppercase">{label}</label>}
       
-      {/* 快速选择按钮 */}
       {showQuickSelect && (
         <div className="flex flex-wrap gap-2">
           {quickValues.map(v => (
@@ -329,10 +333,10 @@ export function PointsSlider({
               key={v}
               type="button"
               onClick={() => onChange(v)}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+              className={`px-3 py-1.5 text-xs rounded-lg font-orbitron font-semibold transition-all ${
                 value === v
-                  ? getValueColor(v) + ' ring-2 ring-offset-1'
-                  : 'text-gray-500 bg-gray-50 hover:bg-gray-100'
+                  ? getValueColor(v) + ' shadow-[0_0_12px_rgba(0,240,255,0.2)]'
+                  : 'text-slate-300 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60'
               }`}
             >
               {v > 0 ? `+${v}` : v}
@@ -341,82 +345,53 @@ export function PointsSlider({
         </div>
       )}
       
-      {/* 滑块 */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-red-500 w-8">-{Math.abs(min)}</span>
+      <div className="flex items-center gap-3 pt-2">
+        <span className="text-xs font-orbitron text-rose-400 w-8">-{Math.abs(min)}</span>
         <input
           type="range"
           min={min}
           max={max}
           value={value}
           onChange={(e) => onChange(parseInt(e.target.value))}
-          className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-parent-500"
+          className="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
         />
-        <span className="text-sm text-green-500 w-8">+{max}</span>
+        <span className="text-xs font-orbitron text-emerald-400 w-8">+{max}</span>
       </div>
       
-      {/* 当前值显示 */}
-      <div className="text-center">
-        <span className={`px-4 py-2 rounded-lg font-bold text-lg ${getValueColor(value)}`}
-        >
-          {value > 0 ? `+${value}` : value} 分
+      <div className="text-center pt-1">
+        <span className={`px-5 py-2 rounded-xl font-orbitron font-bold text-lg inline-block ${getValueColor(value)}`}>
+          {value > 0 ? `+${value}` : value} 星能
         </span>
       </div>
     </div>
   );
 }
 
-// ============ Icon 组件（小程序迁移友好）============
-
-interface IconProps {
-  name: string;
-  size?: number;
-  className?: string;
-}
-
-// 使用 emoji 作为图标，小程序无需处理 SVG
-export function Icon({ name, size = 24, className = '' }: IconProps) {
-  const icons: Record<string, string> = {
-    check: '✅',
-    clock: '⏰',
-    star: '⭐',
-    sun: '☀️',
-    moon: '🌙',
-    book: '📚',
-    pencil: '📝',
-    music: '🎵',
-    game: '🎮',
-    gift: '🎁',
-    home: '🏠',
-    settings: '⚙️',
-    add: '+',
-    delete: '🗑️',
-    edit: '✏️',
+// 兼容导出原通用图标辅助组件
+export function Icon({ name, size = 20, className = '' }: { name: string; size?: number; className?: string }) {
+  const symbolMap: Record<string, string> = {
     back: '←',
     forward: '→',
-    up: '↑',
-    down: '↓',
-    menu: '☰',
+    check: '✓',
     close: '✕',
-    warning: '⚠️',
-    info: '💡',
-    heart: '❤️',
-    trophy: '🏆',
-    calendar: '📅',
-    chart: '📊',
+    edit: '✎',
+    delete: '✕',
+    star: '✦',
+    clock: '⏱',
+    settings: '⚙',
     user: '👤',
     team: '👥',
-    refresh: '🔄',
     lock: '🔒',
     unlock: '🔓',
+    refresh: '↻',
+    warning: '⚠',
+    info: 'ⓘ',
   };
-
   return (
-    <span 
-      className={`inline-block ${className}`} 
-      style={{ fontSize: size }}
-    >
-      {icons[name] || name}
+    <span className={`inline-flex items-center justify-center font-bold ${className}`} style={{ fontSize: size }}>
+      {symbolMap[name] || '•'}
     </span>
   );
-}export { TimePicker } from "./TimePicker";
+}
+
+export { TimePicker } from "./TimePicker";

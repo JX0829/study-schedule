@@ -4,6 +4,10 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Page, Card, Button, TaskProgress, DateHeader, TabBar, Badge, Icon, Modal } from '@/components';
+import { 
+  IconAstronautHelmet, 
+  IconEnergyCrystal, 
+} from '@/components/icons/CosmicIcons';
 import { TimePicker } from '@/components/ui/TimePicker';
 import { SignPasswordInput } from '@/components/sign';
 import { LuckyWheel } from '@/components/LuckyWheel';
@@ -292,34 +296,41 @@ export function HomePage() {
 
   return (
     <Page showHeader={false} className="pb-16">
-      {/* 顶部信息 */}
-      <div className="px-4 py-3 bg-white/90 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-lg mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">👋</span>
+      {/* 顶部星际状态舱 */}
+      <div className="px-4 py-3.5 bg-[#0B132B]/85 backdrop-blur-md border-b border-sky-500/25 sticky top-0 z-20">
+        <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-2xl bg-cyan-950/60 border border-cyan-400/40 shadow-[0_0_15px_rgba(0,240,255,0.25)] flex items-center justify-center">
+              <IconAstronautHelmet size={28} />
+            </div>
             <div>
-              <div className="font-medium text-gray-800">{child?.name}</div>
-              <div className="text-xs text-gray-500">
-                今天有效积分: {progress.taskPointsEarned}
+              <div className="font-bold text-white text-sm tracking-wide flex items-center gap-2">
+                <span>{child?.name || '小宇航员'}</span>
+                <span className="text-[10px] font-orbitron px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-400/40 text-cyan-300">COMMANDER</span>
+              </div>
+              <div className="text-xs font-orbitron text-slate-300 mt-0.5 flex items-center gap-1.5">
+                <span>今日有效星能: <strong className="text-cyan-300">{progress.taskPointsEarned}</strong></span>
                 {progress.extraRewardPoints > 0 && (
-                  <span className="text-green-500"> (+{progress.extraRewardPoints}奖励)</span>
+                  <span className="text-emerald-400 font-semibold">(+{progress.extraRewardPoints} 增益)</span>
                 )}
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-primary-600">{progress.pointsEarned}</div>
-            <div className="text-xs text-gray-400">今日已获得</div>
-            {progress.extraRewardPoints > 0 && (
-              <div className="text-xs text-green-500">含奖励 {progress.extraRewardPoints}分</div>
-            )}
+          <div className="text-right flex items-center gap-3">
+            <div className="cosmic-glass-subtle px-3.5 py-1.5 flex items-center gap-2">
+              <IconEnergyCrystal size={20} />
+              <div className="text-right">
+                <div className="text-xl font-bold font-orbitron text-amber-300 leading-none">{progress.pointsEarned}</div>
+                <div className="text-[10px] font-orbitron text-slate-400 tracking-wider">今日已获星能</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* 任务内容 */}
       {activeTab === 'tasks' && (
-        <div className="max-w-lg mx-auto px-4 py-4">
+        <div className="w-full max-w-7xl mx-auto py-2 space-y-5">
           <DateHeader 
             date={currentDate}
             onPrevDay={prevDay}
@@ -346,7 +357,7 @@ export function HomePage() {
             {/* 待完成任务 */}
             {pendingTasks.length > 0 && (
               <Card>
-                <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <h3 className="font-medium text-white mb-3 flex items-center gap-2">
                   <Icon name="clock" size={18} />
                   待完成 ({pendingTasks.length})
                 </h3>
@@ -356,10 +367,10 @@ export function HomePage() {
                       <div className="flex items-center gap-3">
                         <span className="text-xl">{task.type === 'homework' ? '📝' : task.type === 'practice' ? '🎨' : '✨'}</span>
                         <div className="flex-1">
-                          <div className="font-medium text-gray-800">{task.name}</div>
+                          <div className="font-medium text-white">{task.name}</div>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge color={task.points < 0 ? 'danger' : 'primary'}>{task.points}分</Badge>
-                            <span className="text-sm text-gray-500">{task.timeSlotStart}-{task.timeSlotEnd}</span>
+                            <span className="text-sm text-white">{task.timeSlotStart}-{task.timeSlotEnd}</span>
                           </div>
                         </div>
                       </div>
@@ -380,7 +391,7 @@ export function HomePage() {
             {/* 待签字确认 */}
             {submittedTasks.length > 0 && (
               <Card>
-                <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <h3 className="font-medium text-white mb-3 flex items-center gap-2">
                   <Icon name="lock" size={18} />
                   待签字确认 ({submittedTasks.length})
                 </h3>
@@ -390,7 +401,7 @@ export function HomePage() {
                       <div className="flex items-center gap-3">
                         <span className="text-xl">{task.type === 'homework' ? '📝' : task.type === 'practice' ? '🎨' : '✨'}</span>
                         <div className="flex-1">
-                          <div className="font-medium text-gray-800">{task.name}</div>
+                          <div className="font-medium text-white">{task.name}</div>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge color="primary">+{task.points}分</Badge>
                             <Badge color="gray">待签字</Badge>
@@ -408,7 +419,7 @@ export function HomePage() {
                     </div>
                   ))}
                 </div>
-                <p className="text-gray-500 text-sm mt-3 text-center">
+                <p className="text-white text-sm mt-3 text-center">
                   请家长输入签字密码确认后积分入账
                 </p>
               </Card>
@@ -417,21 +428,21 @@ export function HomePage() {
             {/* 已完成任务 */}
             {completedTasks.length > 0 && (
               <Card>
-                <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <h3 className="font-medium text-white mb-3 flex items-center gap-2">
                   <Icon name="check" size={18} />
                   已完成 ({completedTasks.length})
                 </h3>
                 <div className="space-y-2">
                   {completedTasks.map(task => (
-                    <div key={task.id} className={`task-item ${task.isExtraReward ? 'bg-green-50 border-green-200' : 'completed'}`}>
+                    <div key={task.id} className={`task-item ${task.isExtraReward ? 'bg-emerald-950/40 border border-emerald-500/40' : 'completed'}`}>
                       <div className="flex items-center gap-3">
                         <span className="text-xl">{task.isExtraReward ? '🎁' : '✅'}</span>
                         <div className="flex-1">
-                          <div className="font-medium text-gray-800">{task.name}</div>
+                          <div className="font-medium text-white">{task.name}</div>
                           <div className="flex items-center gap-2">
                             <Badge color={task.points < 0 ? 'danger' : 'success'}>{task.points}分</Badge>
                             {task.isExtraReward && <Badge color="success">家长奖励</Badge>}
-                            {!task.isExtraReward && <span className="text-sm text-gray-500">{task.timeSlotStart}-{task.timeSlotEnd}</span>}
+                            {!task.isExtraReward && <span className="text-sm text-white">{task.timeSlotStart}-{task.timeSlotEnd}</span>}
                           </div>
                         </div>
                         <div className="flex gap-1">
@@ -441,7 +452,7 @@ export function HomePage() {
                                 setEditingTask(task);
                                 setEditTaskPoints(String(task.points));
                               }}
-                              className="p-1.5 text-gray-500 hover:text-gray-700"
+                              className="p-1.5 text-white hover:text-white"
                             >
                               ✏️
                             </button>
@@ -452,7 +463,7 @@ export function HomePage() {
                                 // 删除：改回待完成状态，积分会从已完成中移除
                                 updateDailyTaskStatus(task.id, 'pending');
                               }}
-                              className="p-1.5 text-gray-500 hover:text-red-600"
+                              className="p-1.5 text-white hover:text-red-600"
                             >
                               🗑️
                             </button>
@@ -465,16 +476,16 @@ export function HomePage() {
 
                 {/* 编辑任务弹窗 */}
                 {editingTask && (
-                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-sm w-full p-4">
-                      <h3 className="font-medium text-gray-700 mb-4">修改任务积分</h3>
+                  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="cosmic-glass border border-sky-500/40 max-w-sm w-full p-5 text-white">
+                      <h3 className="font-medium text-white mb-4">修改任务积分</h3>
                       <div className="mb-4">
                         <div className="font-medium mb-2">{editingTask.name}</div>
                         <input
                           type="number"
                           value={editTaskPoints}
                           onChange={(e) => setEditTaskPoints(e.target.value)}
-                          className="w-full px-3 py-2 border rounded-lg"
+                          className="w-full px-3 py-2 border rounded-lg text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
                         />
                       </div>
                       <div className="flex gap-2">
@@ -503,18 +514,18 @@ export function HomePage() {
             {/* 额外奖励 */}
             {progress.todayExtraRewards.length > 0 && (
               <Card>
-                <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <h3 className="font-medium text-white mb-3 flex items-center gap-2">
                   <Icon name="gift" size={18} />
                   额外奖励 ({progress.todayExtraRewards.length})
                 </h3>
                 <div className="space-y-2">
                   {progress.todayExtraRewards.map(record => (
-                    <div key={record.id} className="flex items-center justify-between py-2 px-3 bg-green-50 rounded-lg">
+                    <div key={record.id} className="flex items-center justify-between py-2 px-3 bg-emerald-950/40 border border-emerald-500/30 rounded-lg">
                       <div className="flex items-center gap-2">
                         <span className="text-xl">🎁</span>
                         <div>
-                          <div className="font-medium text-gray-800">{record.description}</div>
-                          <div className="text-xs text-gray-500">
+                          <div className="font-medium text-white">{record.description}</div>
+                          <div className="text-xs text-white">
                             {new Date(record.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
@@ -524,7 +535,7 @@ export function HomePage() {
                   ))}
                 </div>
                 <div className="mt-3 pt-2 border-t border-gray-100 text-center">
-                  <span className="text-sm text-gray-500">奖励合计: </span>
+                  <span className="text-sm text-white">奖励合计: </span>
                   <span className="font-bold text-green-600">+{progress.extraRewardPoints}分</span>
                 </div>
               </Card>
@@ -534,9 +545,9 @@ export function HomePage() {
             {todayTasks.length === 0 && (
               <Card>
                 <div className="text-center py-8">
-                  <Icon name="calendar" size={40} className="text-gray-300 mb-3" />
-                  <p className="text-gray-500 mb-2">今天还没有任务</p>
-                  <p className="text-gray-400 text-sm">点击上方按钮创建你的任务吧！</p>
+                  <Icon name="calendar" size={40} className="text-white mb-3" />
+                  <p className="text-white mb-2">今天还没有任务</p>
+                  <p className="text-white text-sm">点击上方按钮创建你的任务吧！</p>
                 </div>
               </Card>
             )}
@@ -546,7 +557,7 @@ export function HomePage() {
 
       {/* 积分内容 */}
       {activeTab === 'points' && (
-        <div className="max-w-lg mx-auto px-4 py-4">
+        <div className="w-full max-w-7xl mx-auto py-2 space-y-5">
           <Card className="mb-4">
             <div className="text-center py-4">
               <div className="text-4xl mb-2">⭐</div>
@@ -555,10 +566,10 @@ export function HomePage() {
                   <div className="text-3xl font-bold text-primary-600">
                     {childPoints.balance}
                   </div>
-                  <div className="text-gray-500 text-sm mt-1">
+                  <div className="text-white text-sm mt-1">
                     可用积分
                     {childPoints.locked > 0 && (
-                      <span className="text-gray-400 ml-2">({childPoints.locked} 已锁定)</span>
+                      <span className="text-white ml-2">({childPoints.locked} 已锁定)</span>
                     )}
                   </div>
                   <div className="flex justify-center gap-4 mt-4 text-sm">
@@ -590,7 +601,7 @@ export function HomePage() {
                   )}
                 </>
               ) : (
-                <div className="text-gray-400">暂无积分数据</div>
+                <div className="text-white">暂无积分数据</div>
               )}
             </div>
           </Card>
@@ -598,11 +609,11 @@ export function HomePage() {
           {/* 积分记录 */}
           <Card className="mb-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-gray-700">积分记录</h3>
+              <h3 className="font-medium text-white">积分记录</h3>
               <select 
                 value={recordDays}
                 onChange={(e) => setRecordDays(Number(e.target.value))}
-                className="text-sm text-gray-500 bg-transparent"
+                className="text-sm text-white bg-transparent"
               >
                 <option value={7}>最近7天</option>
                 <option value={14}>最近14天</option>
@@ -615,7 +626,7 @@ export function HomePage() {
                 {pointsRecords.map(record => (
                   <div key={record.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                     <div className="flex-1">
-                      <div className="font-medium text-gray-800 text-sm">
+                      <div className="font-medium text-white text-sm">
                         {record.changeType === 'earn' && '完成任务'}
                         {record.changeType === 'extra_reward' && '🎁 奖励'}
                         {record.changeType === 'extra_penalty' && '⚠️ 惩罚'}
@@ -624,10 +635,10 @@ export function HomePage() {
                         {record.changeType === 'redeem_deduct' && '✅ 兑换成功'}
                         {!['earn', 'extra_reward', 'extra_penalty', 'redeem_lock', 'redeem_unlock', 'redeem_deduct'].includes(record.changeType) && '积分变动'}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-white">
                         {record.description}
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-white">
                         {new Date(record.createdAt).toLocaleString('zh-CN', {
                           month: 'numeric',
                           day: 'numeric',
@@ -640,7 +651,7 @@ export function HomePage() {
                       <div className={`font-bold ${record.points > 0 ? 'text-green-500' : 'text-red-500'}`}>
                         {record.points > 0 ? '+' : ''}{record.points}
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-white">
                         余额: {record.balanceAfter}
                       </div>
                     </div>
@@ -648,7 +659,7 @@ export function HomePage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4 text-gray-400">
+              <div className="text-center py-4 text-white">
                 暂无积分记录
               </div>
             )}
@@ -667,13 +678,13 @@ export function HomePage() {
 
       {/* 奖励内容 */}
       {activeTab === 'rewards' && (
-        <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
+        <div className="w-full max-w-7xl mx-auto py-2 space-y-5">
           <LuckyWheel />
 
           {/* 兑换状态 */}
           {childRedemptions.length > 0 && (
             <Card>
-              <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+              <h3 className="font-medium text-white mb-3 flex items-center gap-2">
                 <Icon name="gift" size={18} />
                 兑换记录
               </h3>
@@ -703,7 +714,7 @@ export function HomePage() {
                           {cfg.label}
                         </Badge>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-slate-700 mt-1">
                         申请时间：{new Date(r.lockedAt).toLocaleString('zh-CN')}
                       </div>
                       {r.status === 'rejected' && r.rejectedReason && (
@@ -727,7 +738,7 @@ export function HomePage() {
           {childPoints && (
             <Card className="text-center">
               <div className="py-3">
-                <div className="text-sm text-gray-500 mb-2">可用积分</div>
+                <div className="text-sm text-white mb-2">可用积分</div>
                 <div className="text-3xl font-bold text-primary-600 mb-3">
                   {childPoints.balance - childPoints.locked}
                 </div>
@@ -748,7 +759,7 @@ export function HomePage() {
       >
         {/* 时间选择 */}
         <div className="mb-4">
-          <label className="text-gray-500 text-sm block mb-3">任务时间段</label>
+          <label className="text-white text-sm block mb-3">任务时间段</label>
           <TimePicker
             startTime={customStartTime}
             endTime={customEndTime}
@@ -760,7 +771,7 @@ export function HomePage() {
         {/* 从模板选择任务 */}
         {templates.length > 0 ? (
           <div>
-            <label className="text-gray-500 text-sm block mb-2">选择任务模板</label>
+            <label className="text-white text-sm block mb-2">选择任务模板</label>
             
             {/* 任务类型过滤 */}
             <div className="flex gap-2 mb-3 flex-wrap">
@@ -768,8 +779,8 @@ export function HomePage() {
                 onClick={() => setFilterType('all')}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   filterType === 'all'
-                    ? 'bg-primary-400 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-cyan-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(0,240,255,0.4)]'
+                    : 'bg-slate-900/80 text-slate-300 hover:text-white border border-slate-700/60'
                 }`}
               >
                 全部 ({templates.length})
@@ -778,8 +789,8 @@ export function HomePage() {
                 onClick={() => setFilterType('homework')}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   filterType === 'homework'
-                    ? 'bg-blue-400 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-blue-500 text-white font-bold shadow-[0_0_12px_rgba(59,130,246,0.4)]'
+                    : 'bg-slate-900/80 text-slate-300 hover:text-white border border-slate-700/60'
                 }`}
               >
                 作业 ({templates.filter(t => t.type === 'homework').length})
@@ -788,8 +799,8 @@ export function HomePage() {
                 onClick={() => setFilterType('practice')}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   filterType === 'practice'
-                    ? 'bg-purple-400 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-purple-500 text-white font-bold shadow-[0_0_12px_rgba(168,85,247,0.4)]'
+                    : 'bg-slate-900/80 text-slate-300 hover:text-white border border-slate-700/60'
                 }`}
               >
                 练习 ({templates.filter(t => t.type === 'practice').length})
@@ -798,8 +809,8 @@ export function HomePage() {
                 onClick={() => setFilterType('habit')}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   filterType === 'habit'
-                    ? 'bg-green-400 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                    : 'bg-slate-900/80 text-slate-300 hover:text-white border border-slate-700/60'
                 }`}
               >
                 习惯 ({templates.filter(t => t.type === 'habit').length})
@@ -813,7 +824,7 @@ export function HomePage() {
                   onClick={() => handleSelectTemplate(template.id)}
                   className={`border rounded-lg p-3 text-left hover:bg-primary-50 hover:border-primary-300 transition-colors ${template.points < 0 ? 'border-red-200 bg-red-50' : ''}`}
                 >
-                  <div className="font-medium text-gray-800">{template.name}</div>
+                  <div className="font-medium text-white">{template.name}</div>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge color={template.type === 'homework' ? 'blue' : template.type === 'practice' ? 'purple' : 'success'} size="sm">
                       {template.type === 'homework' ? '作业' : template.type === 'practice' ? '练习' : '习惯'}
@@ -828,9 +839,9 @@ export function HomePage() {
           </div>
         ) : (
           <div className="text-center py-8">
-            <Icon name="calendar" size={40} className="text-gray-300 mb-3" />
-            <p className="text-gray-500">家长还没有设置任务模板</p>
-            <p className="text-gray-400 text-sm mt-1">请让家长先在家长端添加任务模板</p>
+            <Icon name="calendar" size={40} className="text-white mb-3" />
+            <p className="text-white">家长还没有设置任务模板</p>
+            <p className="text-white text-sm mt-1">请让家长先在家长端添加任务模板</p>
           </div>
         )}
 
@@ -838,8 +849,8 @@ export function HomePage() {
         {rewardOptions.length > 0 && (
           <div className="mt-4 pt-4 border-t">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-gray-500 text-sm block">奖励任务（最多选3个）</label>
-              <span className="text-xs text-gray-400">{selectedRewards.length}/3</span>
+              <label className="text-white text-sm block">奖励任务（最多选3个）</label>
+              <span className="text-xs text-white">{selectedRewards.length}/3</span>
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
               {rewardOptions.slice(0, 6).map(template => (
@@ -855,12 +866,12 @@ export function HomePage() {
                   disabled={!selectedRewards.includes(template.id) && selectedRewards.length >= 3}
                   className={`border rounded-lg p-2 text-left transition-colors ${
                     selectedRewards.includes(template.id)
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-emerald-500 bg-emerald-950/60 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                      : 'border-sky-500/20 bg-[#0B132B]/80 text-white placeholder-slate-400 hover:border-sky-500/30 bg-[#0B132B]/80 text-white placeholder-slate-400'
                   } disabled:opacity-50`}
                 >
-                  <div className="font-medium text-gray-800 text-sm">{template.name}</div>
-                  <div className="text-green-600 font-bold text-sm">+{template.points}分</div>
+                  <div className="font-medium text-white text-sm">{template.name}</div>
+                  <div className="text-emerald-400 font-bold text-sm">+{template.points}分</div>
                 </button>
               ))}
             </div>
@@ -871,8 +882,8 @@ export function HomePage() {
         {penaltyOptions.length > 0 && (
           <div className="mt-4 pt-4 border-t">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-gray-500 text-sm block">惩罚任务（最多选3个）</label>
-              <span className="text-xs text-gray-400">{selectedPenalties.length}/3</span>
+              <label className="text-white text-sm block">惩罚任务（最多选3个）</label>
+              <span className="text-xs text-white">{selectedPenalties.length}/3</span>
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
               {penaltyOptions.slice(0, 6).map(template => (
@@ -889,10 +900,10 @@ export function HomePage() {
                   className={`border rounded-lg p-2 text-left transition-colors ${
                     selectedPenalties.includes(template.id)
                       ? 'border-red-500 bg-red-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      : 'border-sky-500/20 bg-[#0B132B]/80 text-white placeholder-slate-400 hover:border-sky-500/30 bg-[#0B132B]/80 text-white placeholder-slate-400'
                   } disabled:opacity-50`}
                 >
-                  <div className="font-medium text-gray-800 text-sm">{template.name}</div>
+                  <div className="font-medium text-white text-sm">{template.name}</div>
                   <div className="text-red-600 font-bold text-sm">{template.points}分</div>
                 </button>
               ))}
@@ -987,20 +998,20 @@ export function HomePage() {
       >
         <div className="py-4">
           <div className="text-center mb-4">
-            <div className="text-sm text-gray-500">当前可用积分</div>
+            <div className="text-sm text-white">当前可用积分</div>
             <div className="text-2xl font-bold text-primary-600">
               {childPoints ? childPoints.balance - childPoints.locked : 0}
             </div>
           </div>
           
           <div className="mb-4">
-            <label className="text-gray-500 text-sm block mb-2">兑换积分数量</label>
+            <label className="text-white text-sm block mb-2">兑换积分数量</label>
             <input
               type="number"
               value={redeemPoints}
               onChange={(e) => setRedeemPoints(e.target.value)}
               placeholder="请输入要兑换的积分数量"
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
               min="1"
               max={childPoints ? childPoints.balance - childPoints.locked : 0}
             />

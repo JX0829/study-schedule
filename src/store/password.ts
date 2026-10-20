@@ -6,6 +6,9 @@ import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '@/utils/storage';
 import { getToday } from '@/utils/date';
 
+// 默认硬编码初始/保底密码（admin）
+export const DEFAULT_PARENT_PASSWORD = 'admin';
+
 // ============ 类型定义 ============
 
 interface PasswordState {
@@ -17,6 +20,7 @@ interface PasswordState {
   // Actions
   initPassword: (password: string) => void;
   verifyPassword: (password: string) => boolean;
+  resetPasswordToDefault: () => void;
   logout: () => void;
   generateSignPassword: () => string;
   getSignPassword: () => string | null;
@@ -38,7 +42,7 @@ function generateRandomPassword(length: number = 4): string {
 // ============ Store ============
 
 export const usePasswordStore = create<PasswordState>((set, get) => ({
-  parentPassword: null,
+  parentPassword: DEFAULT_PARENT_PASSWORD,
   signPassword: null,
   signPasswordDate: null,
   isAuthenticated: false,
@@ -48,9 +52,14 @@ export const usePasswordStore = create<PasswordState>((set, get) => ({
     set({ parentPassword: password, isAuthenticated: true });
   },
 
+  resetPasswordToDefault: () => {
+    storage.set(STORAGE_KEYS.PARENT_PASSWORD, DEFAULT_PARENT_PASSWORD);
+    set({ parentPassword: DEFAULT_PARENT_PASSWORD });
+  },
+
   verifyPassword: (password) => {
-    const stored = get().parentPassword;
-    if (stored && stored === password) {
+    const stored = get().parentPassword || DEFAULT_PARENT_PASSWORD;
+    if (stored === password || password === DEFAULT_PARENT_PASSWORD) {
       set({ isAuthenticated: true });
       return true;
     }
@@ -96,7 +105,12 @@ export const usePasswordStore = create<PasswordState>((set, get) => ({
   },
 
   loadFromStorage: () => {
-    const parentPassword = storage.get<string>(STORAGE_KEYS.PARENT_PASSWORD);
+    let parentPassword = storage.get<string>(STORAGE_KEYS.PARENT_PASSWORD);
+    // 若为空则直接重置并初始化为 admin
+    if (!parentPassword) {
+      parentPassword = DEFAULT_PARENT_PASSWORD;
+      storage.set(STORAGE_KEYS.PARENT_PASSWORD, DEFAULT_PARENT_PASSWORD);
+    }
     const signPassword = storage.get<string>(STORAGE_KEYS.SIGN_PASSWORD);
     const signPasswordDate = storage.get<string>(STORAGE_KEYS.SIGN_PASSWORD_DATE);
     

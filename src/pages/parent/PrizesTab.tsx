@@ -101,31 +101,33 @@ export function PrizesTab(_props: PrizesTabProps) {
   return (
     <div className="space-y-4">
       <Card>
-        <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+        <h3 className="font-medium text-white mb-3 flex items-center gap-2">
           <Icon name="gift" size={20} />
           抽奖奖品配置
         </h3>
-        <p className="text-gray-500 text-sm mb-4">
+        <p className="text-slate-400 text-sm mb-4">
           配置抽奖大转盘的奖品，中奖概率总和应为100%
         </p>
 
         {/* 每日抽奖次数配置 */}
-        <div className="bg-blue-50 rounded-lg p-3 mb-4">
+        <div className="bg-[#0B132B]/80 border border-sky-500/30 rounded-xl p-3.5 mb-4 shadow-[inset_0_0_12px_rgba(0,240,255,0.06)]">
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-medium text-gray-700">每日抽奖次数</div>
-              <div className="text-gray-500 text-sm">当天有效，过期作废</div>
+              <div className="font-semibold text-white">每日抽奖次数</div>
+              <div className="text-slate-400 text-xs mt-0.5">当天有效，过期作废</div>
             </div>
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
                 variant="ghost"
+                className="text-slate-300 hover:text-white hover:bg-slate-800/60 border border-slate-700/60 w-8 h-8 p-0 flex items-center justify-center font-bold"
                 onClick={() => handleSaveDailySpinCount(Math.max(1, dailySpinCount - 1))}
               >-</Button>
-              <span className="text-xl font-bold text-primary-600 w-8 text-center">{dailySpinCount}</span>
+              <span className="text-xl font-orbitron font-bold text-cyan-300 w-8 text-center">{dailySpinCount}</span>
               <Button
                 size="sm"
                 variant="ghost"
+                className="text-slate-300 hover:text-white hover:bg-slate-800/60 border border-slate-700/60 w-8 h-8 p-0 flex items-center justify-center font-bold"
                 onClick={() => handleSaveDailySpinCount(dailySpinCount + 1)}
               >+</Button>
             </div>
@@ -162,7 +164,7 @@ export function PrizesTab(_props: PrizesTabProps) {
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-gray-500">概率总和: {probabilitySum}%</span>
+          <span className="text-slate-400">概率总和: {probabilitySum}%</span>
           {probabilitySum !== 100 && (
             <Badge color="danger">应为100%</Badge>
           )}
@@ -172,34 +174,34 @@ export function PrizesTab(_props: PrizesTabProps) {
       {/* 添加奖品 */}
       {showAddPrize ? (
         <Card>
-          <h3 className="font-medium text-gray-700 mb-3">添加奖品</h3>
+          <h3 className="font-medium text-white mb-3">添加奖品</h3>
           <div className="space-y-3">
             <input
               type="text"
               value={newPrizeName}
               onChange={(e) => setNewPrizeName(e.target.value)}
               placeholder="奖品名称（如：10积分）"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
             />
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="text-gray-500 text-sm">积分</label>
+                <label className="text-slate-400 text-sm">积分</label>
                 <input
                   type="number"
                   value={newPrizePoints}
                   onChange={(e) => setNewPrizePoints(e.target.value)}
                   placeholder="10"
-                  className="w-full px-3 py-2 border rounded-lg mt-1"
+                  className="w-full px-3 py-2 border rounded-lg mt-1 text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
                 />
               </div>
               <div className="flex-1">
-                <label className="text-gray-500 text-sm">概率%</label>
+                <label className="text-slate-400 text-sm">概率%</label>
                 <input
                   type="number"
                   value={newPrizeProbability}
                   onChange={(e) => setNewPrizeProbability(e.target.value)}
                   placeholder="20"
-                  className="w-full px-3 py-2 border rounded-lg mt-1"
+                  className="w-full px-3 py-2 border rounded-lg mt-1 text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
                 />
               </div>
             </div>
@@ -216,33 +218,33 @@ export function PrizesTab(_props: PrizesTabProps) {
       {/* 奖品编辑弹窗 */}
       {editingPrize && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-sm w-full p-4">
-            <h3 className="font-medium text-gray-700 mb-4">✏️ 修改奖品</h3>
+          <div className="cosmic-glass text-white rounded-lg max-w-sm w-full p-4">
+            <h3 className="font-medium text-white mb-4">✏️ 修改奖品</h3>
             <div className="space-y-3 mb-4">
               <input
                 type="text"
                 value={editPrizeName}
                 onChange={(e) => setEditPrizeName(e.target.value)}
                 placeholder="奖品名称"
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
               />
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <label className="text-gray-500 text-sm">积分</label>
+                  <label className="text-slate-400 text-sm">积分</label>
                   <input
                     type="number"
                     value={editPrizePoints}
                     onChange={(e) => setEditPrizePoints(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg mt-1"
+                    className="w-full px-3 py-2 border rounded-lg mt-1 text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="text-gray-500 text-sm">概率%</label>
+                  <label className="text-slate-400 text-sm">概率%</label>
                   <input
                     type="number"
                     value={editPrizeProbability}
                     onChange={(e) => setEditPrizeProbability(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg mt-1"
+                    className="w-full px-3 py-2 border rounded-lg mt-1 text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
                   />
                 </div>
               </div>

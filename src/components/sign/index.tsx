@@ -42,7 +42,7 @@ export function SignPasswordInput({ onConfirm, onCancel, title = '签字确认' 
           }}
           placeholder="请输入家长签字密码"
           maxLength={4}
-          className="w-full px-4 py-3 border rounded-lg text-center text-xl font-mono uppercase focus:outline-none focus:ring-2 focus:ring-primary-400"
+          className="w-full px-4 py-3 border rounded-lg text-center text-xl font-mono uppercase focus:outline-none focus:ring-2 focus:ring-primary-400 text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
         />
         {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
       </div>

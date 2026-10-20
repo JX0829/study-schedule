@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Page, Tabs, Icon, Button, Card, Badge } from '@/components';
+import { Page, Tabs } from '@/components';
+import { 
+  IconCommandDeck, 
+  IconEnergyCrystal, 
+  IconShieldLock 
+} from '@/components/icons/CosmicIcons';
 import { PushSettings } from '@/components/PushSettings';
 import {
   useFamilyStore, useTaskStore, useRewardStore, usePasswordStore,
@@ -57,7 +62,7 @@ export function ParentPage() {
   const deleteRewardTemplate = useTemplateStore(s => s.deleteRewardTemplate);
   const initDefaultTemplates = useTemplateStore(s => s.initDefaultTemplates);
 
-  // 跨 Tab 数据同步：孩子在另一个 Tab 写入数据后，家长端自动检测并刷新
+  // 跨 Tab 数据同步
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key && (
@@ -66,7 +71,6 @@ export function ParentPage() {
         e.key.includes('child_points') ||
         e.key.includes('points_records')
       )) {
-        console.log('🔄 检测到数据变更，刷新家长端数据:', e.key);
         setTimeout(() => {
           useRewardStore.getState().loadFromStorage();
           useTaskStore.getState().loadFromStorage();
@@ -78,7 +82,7 @@ export function ParentPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // 定时刷新数据（每30秒同步一次，兜底保证数据不丢）
+  // 定时刷新数据
   useEffect(() => {
     const interval = setInterval(() => {
       useRewardStore.getState().loadFromStorage();
@@ -89,8 +93,8 @@ export function ParentPage() {
   }, []);
 
   useEffect(() => { startTaskReminder(); return () => stopTaskReminder(); }, []);
-
   useEffect(() => { generateSignPassword(); }, []);
+
   const parent = users.find(u => u.role === 'parent');
   const child = users.find(u => u.role === 'child');
   const childPoints = child ? getChildPoints(child.id) : null;
@@ -112,7 +116,6 @@ export function ParentPage() {
     getPendingRedemptions(), [redemptionRecords, getPendingRedemptions]);
   const processedRedemptions = redemptionRecords.filter(r => r.status !== 'pending');
 
-  // 最旧待审批兑换的等待时长
   const oldestPendingWait = useMemo(() => {
     if (pendingRedemptions.length === 0) return '';
     const oldest = pendingRedemptions.reduce((a, b) =>
@@ -124,7 +127,6 @@ export function ParentPage() {
     return `${Math.floor(hours / 24)} 天前`;
   }, [pendingRedemptions]);
 
-  // 有待审批兑换时自动跳转到兑换审批 Tab
   const [hasCheckedRedemptions, setHasCheckedRedemptions] = useState(false);
   useEffect(() => {
     if (pendingRedemptions.length > 0 && !hasCheckedRedemptions) {
@@ -176,61 +178,82 @@ export function ParentPage() {
     { key: 'prizes', label: '奖品配置' },
     { key: 'modules', label: '模块配置' },
     { key: 'push', label: '推送设置' },
-    { key: 'config', label: '配置' },
+    { key: 'config', label: '系统设置' },
   ];
 
   return (
-    <Page showHeader={false} className="pb-20">
-      <div className="px-4 py-3 bg-blue-500/90 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-lg mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">👨‍👩‍👧</span>
+    <Page showHeader={false} className="pb-24">
+      {/* 科技宇宙星际指挥台顶栏 */}
+      <div className="px-4 py-3.5 bg-[#0B132B]/90 backdrop-blur-md border-b border-sky-500/25 sticky top-0 z-20">
+        <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-2xl bg-indigo-950/60 border border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.25)] flex items-center justify-center">
+              <IconCommandDeck size={26} />
+            </div>
             <div>
-              <div className="font-medium text-white">家长端</div>
-              <div className="text-xs text-blue-100">{family?.name}</div>
+              <div className="font-bold text-sm tracking-wide text-white flex items-center gap-2 font-orbitron">
+                星际指挥管控台
+                <span className="text-[10px] font-orbitron px-2 py-0.5 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-300">HQ</span>
+              </div>
+              <div className="text-xs text-slate-400 mt-0.5">{family?.name || '家庭星舰基地'}</div>
             </div>
           </div>
-          {childPoints && (
-            <div className="bg-white/20 px-3 py-1 rounded-full">
-              <span className="text-white font-medium">{childPoints.balance}</span>
-              <span className="text-blue-100 text-sm ml-1">分</span>
+
+          <div className="flex items-center gap-3">
+            {/* 今日快捷签字授权码胶囊 */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-amber-500/30 shadow-[0_0_10px_rgba(251,191,36,0.15)]">
+              <IconShieldLock size={16} className="text-amber-400" />
+              <span className="text-xs text-slate-300 font-medium">授权码:</span>
+              <span className="font-orbitron font-bold text-amber-300 tracking-widest">{signPassword || '----'}</span>
             </div>
-          )}
+
+            {childPoints && (
+              <div className="cosmic-glass-subtle px-3 py-1.5 flex items-center gap-1.5">
+                <IconEnergyCrystal size={18} />
+                <span className="text-amber-300 font-orbitron font-bold text-sm">{childPoints.balance}</span>
+                <span className="text-slate-400 text-xs font-orbitron">星能</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 待审批兑换提醒横幅 */}
+      {/* 待审批兑换提醒横幅 (极简预警) */}
       {pendingRedemptions.length > 0 && (
-        <div className="sticky top-[52px] z-8 bg-gradient-to-r from-amber-400 via-orange-500 to-red-400 text-white animate-pulse shadow-lg shadow-orange-500/30">
-          <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="sticky top-[52px] z-10 bg-slate-850/95 border-b border-rose-500/30 backdrop-blur-md">
+          <div className="w-full max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
             <button
               className="flex items-center gap-3 flex-1 text-left"
               onClick={() => setActiveTab('redemptions')}
             >
-              <span className="text-2xl animate-bounce">🔔</span>
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
               <div className="flex flex-col">
-                <span className="font-bold text-base">有 {pendingRedemptions.length} 条兑换申请待审批</span>
-                <span className="text-white/80 text-xs">最早于 {oldestPendingWait} 提交 · 点击立即处理</span>
+                <span className="font-semibold text-xs tracking-wide text-rose-300">
+                  {pendingRedemptions.length} 条兑换申请待处理
+                </span>
+                <span className="text-slate-400 text-[11px]">
+                  最早提交于 {oldestPendingWait} · 点击进入审核
+                </span>
               </div>
             </button>
             <button
-              className="text-white/70 hover:text-white px-2"
+              className="text-slate-400 hover:text-white px-2 font-mono text-xs"
               onClick={() => setActiveTab('redemptions')}
             >
-              <Icon name="forward" size={16} />
+              ➔
             </button>
           </div>
         </div>
       )}
 
       {/* Tab 栏 */}
-      <div className={`bg-white sticky ${pendingRedemptions.length > 0 ? 'top-[100px]' : 'top-[52px]'} z-9 border-b`}>
-        <div className="max-w-lg mx-auto overflow-x-auto">
+      <div className={`bg-slate-900/90 backdrop-blur-md sticky ${pendingRedemptions.length > 0 ? 'top-[95px]' : 'top-[52px]'} z-10 border-b border-slate-800`}>
+        <div className="w-full max-w-7xl mx-auto overflow-x-auto scrollbar-hide px-2">
           <Tabs tabs={tabs} activeKey={activeTab} onChange={setActiveTab} />
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-4">
+      <div className="w-full max-w-7xl mx-auto px-4 py-4">
         {activeTab === 'today' && (
           <TodayTasksTab currentDate={currentDate} onDateChange={setCurrentDate}
             progress={progress} pendingTasks={pendingTasks} submittedTasks={submittedTasks}

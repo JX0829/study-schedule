@@ -9,9 +9,9 @@ interface DeleteConfirmModalProps {
 export function DeleteConfirmModal({ taskName, onConfirm, onClose }: DeleteConfirmModalProps) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-sm w-full p-4">
-        <h3 className="font-medium text-gray-700 mb-4">🗑️ 确认删除</h3>
-        <p className="text-gray-500 mb-4">
+      <div className="cosmic-glass text-white rounded-lg max-w-sm w-full p-4">
+        <h3 className="font-medium text-white mb-4">🗑️ 确认删除</h3>
+        <p className="text-slate-400 mb-4">
           确定要删除任务 "{taskName}" 吗？
         </p>
         <div className="flex gap-2">

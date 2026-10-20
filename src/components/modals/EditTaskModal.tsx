@@ -17,15 +17,15 @@ export function EditTaskModal({ task, onSave, onClose }: EditTaskModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-sm w-full p-4">
-        <h3 className="font-medium text-gray-700 mb-4">✏️ 修改任务积分</h3>
+      <div className="cosmic-glass text-white rounded-lg max-w-sm w-full p-4">
+        <h3 className="font-medium text-white mb-4">✏️ 修改任务积分</h3>
         <div className="mb-4">
           <div className="font-medium mb-2">{task.name}</div>
           <input
             type="number"
             value={points}
             onChange={(e) => setPoints(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="w-full px-3 py-2 border rounded-lg text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
           />
         </div>
         <div className="flex gap-2">

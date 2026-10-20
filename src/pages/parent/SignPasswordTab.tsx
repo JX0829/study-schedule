@@ -12,24 +12,24 @@ export function SignPasswordTab({ signPassword, onLogout }: SignPasswordTabProps
   return (
     <div className="space-y-4">
       <Card>
-        <h3 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
+        <h3 className="font-medium text-white mb-4 flex items-center gap-2">
           <Icon name="lock" size={20} />
           今日签字密码
         </h3>
 
         <div className="flex items-center justify-center gap-4 py-4">
-          <div className="text-3xl font-mono px-6 py-3 bg-gray-100 rounded-lg">
+          <div className="text-3xl font-mono px-6 py-3 bg-slate-800/60 rounded-lg">
             {showSignPassword ? signPassword : '****'}
           </div>
           <button
             onClick={() => setShowSignPassword(!showSignPassword)}
-            className="p-3 text-gray-500 hover:text-gray-700 bg-gray-100 rounded-lg"
+            className="p-3 text-slate-400 hover:text-white bg-slate-800/60 rounded-lg"
           >
             {showSignPassword ? '👁️' : '👁️‍🗨️'}
           </button>
         </div>
 
-        <p className="text-gray-500 text-sm text-center mb-4">
+        <p className="text-slate-400 text-sm text-center mb-4">
           此密码用于孩子端确认任务完成
         </p>
       </Card>

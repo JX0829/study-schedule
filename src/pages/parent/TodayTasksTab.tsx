@@ -90,13 +90,13 @@ export function TodayTasksTab({
     <div className="flex gap-1">
       <button
         onClick={() => setEditingTask(task)}
-        className="p-1.5 text-gray-500 hover:text-gray-700"
+        className="p-1.5 text-slate-400 hover:text-white"
       >
         ✏️
       </button>
       <button
         onClick={() => setDeleteConfirmTask(task)}
-        className="p-1.5 text-gray-500 hover:text-red-600"
+        className="p-1.5 text-slate-400 hover:text-red-600"
       >
         🗑️
       </button>
@@ -108,7 +108,7 @@ export function TodayTasksTab({
       {/* Date picker */}
       <div className="flex items-center justify-between">
         <Button size="sm" variant="ghost" onClick={prevDay}>◀</Button>
-        <div className="font-medium text-gray-700">{currentDate}</div>
+        <div className="font-medium text-white">{currentDate}</div>
         <Button size="sm" variant="ghost" onClick={nextDay}>▶</Button>
       </div>
 
@@ -134,7 +134,7 @@ export function TodayTasksTab({
       {/* Pending tasks */}
       {pendingTasks.length > 0 && (
         <Card>
-          <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+          <h3 className="font-medium text-white mb-3 flex items-center gap-2">
             <Icon name="clock" size={18} />
             待完成 ({pendingTasks.length})
           </h3>
@@ -146,10 +146,10 @@ export function TodayTasksTab({
                     {task.type === 'homework' ? '📝' : task.type === 'practice' ? '🎨' : '✨'}
                   </span>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-800">{task.name}</div>
+                    <div className="font-medium text-white font-semibold">{task.name}</div>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge color={task.points < 0 ? 'danger' : 'primary'}>{task.points}分</Badge>
-                      <span className="text-sm text-gray-500">{task.timeSlotStart}-{task.timeSlotEnd}</span>
+                      <span className="text-sm text-slate-400">{task.timeSlotStart}-{task.timeSlotEnd}</span>
                     </div>
                   </div>
                   {renderTaskActions(task)}
@@ -169,13 +169,13 @@ export function TodayTasksTab({
           </h3>
           <div className="space-y-2">
             {submittedTasks.map(task => (
-              <div key={task.id} className="border border-yellow-200 rounded-lg p-3 bg-white">
+              <div key={task.id} className="border border-yellow-200 rounded-lg p-3 cosmic-glass text-white">
                 <div className="flex items-center gap-3">
                   <span className="text-xl">
                     {task.type === 'homework' ? '📝' : task.type === 'practice' ? '🎨' : '✨'}
                   </span>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-800">{task.name}</div>
+                    <div className="font-medium text-white font-semibold">{task.name}</div>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge color="primary">+{task.points}分</Badge>
                       <Badge color="gray">待确认</Badge>
@@ -201,17 +201,17 @@ export function TodayTasksTab({
       {/* Completed tasks */}
       {completedTasks.length > 0 && (
         <Card>
-          <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+          <h3 className="font-medium text-white mb-3 flex items-center gap-2">
             <Icon name="check" size={18} />
             已完成 ({completedTasks.length})
           </h3>
           <div className="space-y-2">
             {completedTasks.map(task => (
-              <div key={task.id} className="border rounded-lg p-3 bg-green-50">
+              <div key={task.id} className="border border-emerald-500/30 rounded-lg p-3 bg-emerald-950/40 shadow-sm">
                 <div className="flex items-center gap-3">
                   <span className="text-xl">✅</span>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-800">{task.name}</div>
+                    <div className="font-medium text-white font-semibold">{task.name}</div>
                     <Badge color={task.points < 0 ? 'danger' : 'success'}>{task.points}分</Badge>
                   </div>
                   {renderTaskActions(task)}
@@ -227,8 +227,8 @@ export function TodayTasksTab({
         <Card>
           <div className="text-center py-8">
             <Icon name="calendar" size={40} className="text-gray-300 mb-3" />
-            <p className="text-gray-500">今天还没有任务</p>
-            <p className="text-gray-400 text-sm mt-1">等孩子添加任务后会显示在这里</p>
+            <p className="text-slate-400">今天还没有任务</p>
+            <p className="text-slate-400 text-sm mt-1">等孩子添加任务后会显示在这里</p>
           </div>
         </Card>
       )}
@@ -236,8 +236,8 @@ export function TodayTasksTab({
       {/* Bonus modal */}
       {showBonusModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-sm w-full p-4 max-h-[80vh] overflow-y-auto">
-            <h3 className="font-medium text-gray-700 mb-4 text-lg">🎁 发放额外奖惩</h3>
+          <div className="cosmic-glass text-white rounded-lg max-w-sm w-full p-4 max-h-[80vh] overflow-y-auto">
+            <h3 className="font-medium text-white mb-4 text-lg">🎁 发放额外奖惩</h3>
 
             {/* Type selector */}
             <div className="flex gap-2 mb-4">
@@ -246,7 +246,7 @@ export function TodayTasksTab({
                 className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
                   bonusType === 'reward'
                     ? 'bg-green-500 text-white'
-                    : 'bg-gray-100 text-gray-600'
+                    : 'bg-slate-800/60 text-slate-300'
                 }`}
               >
                 奖励 +
@@ -256,7 +256,7 @@ export function TodayTasksTab({
                 className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
                   bonusType === 'penalty'
                     ? 'bg-red-500 text-white'
-                    : 'bg-gray-100 text-gray-600'
+                    : 'bg-slate-800/60 text-slate-300'
                 }`}
               >
                 惩罚 -
@@ -272,17 +272,17 @@ export function TodayTasksTab({
                   className={`w-full border rounded-lg p-3 text-left transition-colors ${
                     bonusTemplateId === template.id
                       ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      : 'border-sky-500/20 hover:border-sky-500/30 bg-[#0B132B]/80 text-white placeholder-slate-400'
                   }`}
                 >
-                  <div className="font-medium text-gray-800">{template.name}</div>
+                  <div className="font-medium text-white font-semibold">{template.name}</div>
                   <div className={`font-bold ${template.points > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {template.points > 0 ? '+' : ''}{template.points}分
                   </div>
                 </button>
               ))}
               {rewardTemplates.length === 0 && (
-                <p className="text-gray-500 text-center py-4">请先在奖惩模板中添加模板</p>
+                <p className="text-slate-400 text-center py-4">请先在奖惩模板中添加模板</p>
               )}
             </div>
 
@@ -292,7 +292,7 @@ export function TodayTasksTab({
               value={bonusDescription}
               onChange={(e) => setBonusDescription(e.target.value)}
               placeholder="添加备注（可选）"
-              className="w-full px-3 py-2 border rounded-lg mb-4"
+              className="w-full px-3 py-2 border rounded-lg mb-4 text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
             />
 
             {/* Buttons */}

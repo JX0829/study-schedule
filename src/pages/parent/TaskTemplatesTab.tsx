@@ -105,7 +105,7 @@ export function TaskTemplatesTab({
   return (
     <div className="space-y-4">
       <Card>
-        <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+        <h3 className="font-medium text-white mb-3 flex items-center gap-2">
           <Icon name="calendar" size={20} />
           任务模板
         </h3>
@@ -142,7 +142,7 @@ export function TaskTemplatesTab({
         ) : (
           <div className="text-center py-8">
             <Icon name="calendar" size={40} className="text-gray-300 mb-3" />
-            <p className="text-gray-500 mb-4">暂无任务模板</p>
+            <p className="text-slate-400 mb-4">暂无任务模板</p>
             <Button onClick={onInitDefaults}>
               导入默认模板
             </Button>
@@ -153,32 +153,32 @@ export function TaskTemplatesTab({
       {/* 添加任务模板 */}
       {showAdd ? (
         <Card>
-          <h3 className="font-medium text-gray-700 mb-3">添加任务模板</h3>
+          <h3 className="font-medium text-white mb-3">添加任务模板</h3>
           <div className="space-y-3">
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="任务名称"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
             />
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <label className="text-gray-500 text-sm">分值</label>
+                <label className="text-slate-400 text-sm">分值</label>
                 <input
                   type="number"
                   value={newPoints}
                   onChange={(e) => setNewPoints(e.target.value)}
                   placeholder="5"
-                  className="w-full px-3 py-2 border rounded-lg mt-1"
+                  className="w-full px-3 py-2 border rounded-lg mt-1 text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
                 />
               </div>
               <div className="flex-1">
-                <label className="text-gray-500 text-sm">类型</label>
+                <label className="text-slate-400 text-sm">类型</label>
                 <select
                   value={newType}
                   onChange={(e) => setNewType(e.target.value as TaskType)}
-                  className="w-full px-3 py-2 border rounded-lg mt-1"
+                  className="w-full px-3 py-2 border rounded-lg mt-1 text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
                 >
                   <option value="homework">作业</option>
                   <option value="practice">练习</option>
@@ -208,8 +208,8 @@ export function TaskTemplatesTab({
       {/* 剪切板导入 */}
       {showClipboardImport && (
         <Card>
-          <h3 className="font-medium text-gray-700 mb-3">📋 剪切板批量导入</h3>
-          <p className="text-gray-500 text-sm mb-3">
+          <h3 className="font-medium text-white mb-3">📋 剪切板批量导入</h3>
+          <p className="text-slate-400 text-sm mb-3">
             格式：名称(分值)(类型)
           </p>
           <textarea
@@ -219,19 +219,19 @@ export function TaskTemplatesTab({
               setImportPreview(parseClipboardText(e.target.value));
             }}
             placeholder="完成作业(10)(作业)\n晨读(5)(习惯)\n课外阅读(8)(练习)"
-            className="w-full px-3 py-2 border rounded-lg min-h-[120px]"
+            className="w-full px-3 py-2 border rounded-lg min-h-[120px] text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
           />
 
           {importPreview.length > 0 && (
             <div className="mt-3">
-              <div className="border rounded-lg p-2 bg-gray-50">
-                <p className="text-gray-500 text-sm mb-2">
+              <div className="border rounded-lg p-2 cosmic-glass-subtle">
+                <p className="text-slate-400 text-sm mb-2">
                   预览（{importPreview.length} 个任务）：
                 </p>
                 <div className="max-h-[200px] overflow-y-auto">
                   {importPreview.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between py-1">
-                      <span className="text-gray-700">{item.name}</span>
+                      <span className="text-white">{item.name}</span>
                       <div className="flex items-center gap-2">
                         <Badge color="primary">+{item.points}分</Badge>
                       </div>
@@ -256,32 +256,32 @@ export function TaskTemplatesTab({
       {/* 编辑弹窗 */}
       {editing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-sm w-full p-4">
-            <h3 className="font-medium text-gray-700 mb-4">✏️ 修改任务模板</h3>
+          <div className="cosmic-glass text-white rounded-lg max-w-sm w-full p-4">
+            <h3 className="font-medium text-white mb-4">✏️ 修改任务模板</h3>
             <div className="space-y-3 mb-4">
               <input
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="任务名称"
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
               />
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <label className="text-gray-500 text-sm">分值</label>
+                  <label className="text-slate-400 text-sm">分值</label>
                   <input
                     type="number"
                     value={editPoints}
                     onChange={(e) => setEditPoints(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg mt-1"
+                    className="w-full px-3 py-2 border rounded-lg mt-1 text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="text-gray-500 text-sm">类型</label>
+                  <label className="text-slate-400 text-sm">类型</label>
                   <select
                     value={editType}
                     onChange={(e) => setEditType(e.target.value as TaskType)}
-                    className="w-full px-3 py-2 border rounded-lg mt-1"
+                    className="w-full px-3 py-2 border rounded-lg mt-1 text-white bg-[#0B132B]/80 border-sky-500/30 placeholder-slate-400"
                   >
                     <option value="homework">作业</option>
                     <option value="practice">练习</option>

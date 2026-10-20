@@ -15,6 +15,17 @@ dist-ssr
 # PM2 logs
 logs/
 
+# Build & Cache
+*.tsbuildinfo
+
+# Local scripts & Unrelated files
+1111.yml
+check_storage.html
+
+# Environment files
+.env
+.env.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

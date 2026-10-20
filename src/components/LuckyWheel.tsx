@@ -278,7 +278,7 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
             ) : canSpin ? (
               <>
                 <span className="text-sm">抽奖</span>
-                <span className="text-xs text-gray-400">{remainingSpins}次</span>
+                <span className="text-xs text-slate-400">{remainingSpins}次</span>
               </>
             ) : (
               <span className="text-sm">明天</span>
@@ -288,19 +288,19 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
 
         {/* 结果显示 */}
         {result && (
-          <div className="text-center py-4 bg-green-50 rounded-lg mb-4">
+          <div className="text-center py-4 bg-emerald-950/60 border border-emerald-500/40 rounded-xl mb-4 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
             <div className="text-2xl mb-2">🎉</div>
-            <div className="text-xl font-bold text-green-600">
+            <div className="text-xl font-bold text-emerald-300 font-orbitron">
               {result.points > 0 ? `获得 ${result.points} 积分！` : result.name}
             </div>
-            <div className="text-gray-500 text-sm mt-2">
+            <div className="text-slate-300 text-sm mt-2">
               {result.points > 0 ? `积分已发放到账户` : '积分不变，明天再来！'}
             </div>
           </div>
         )}
 
         {/* 抽奖说明 */}
-        <div className="text-center text-gray-500 text-sm">
+        <div className="text-center text-slate-400 text-sm">
           <p>🎰 每天可以抽奖一次</p>
           <p>💪 完成任务可获得抽奖机会</p>
         </div>
@@ -310,12 +310,12 @@ export function LuckyWheel({ onSpinComplete }: LuckyWheelProps) {
       <Card>
         <div className="space-y-2">
           {prizes.map((prize, index) => (
-            <div key={prize.id} className="flex items-center gap-2 py-2 border-b border-gray-100 last:border-0">
+            <div key={prize.id} className="flex items-center gap-2 py-2 border-b border-sky-500/20 last:border-0">
               <div 
                 className="w-3 h-3 rounded-full" 
                 style={{ background: colors[index % colors.length] }}
               ></div>
-              <span className="text-gray-700">{prize.name}</span>
+              <span className="text-white">{prize.name}</span>
             </div>
           ))}
         </div>
