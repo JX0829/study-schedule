@@ -397,14 +397,14 @@ export function HomePage() {
                 </h3>
                 <div className="space-y-2">
                   {submittedTasks.map(task => (
-                    <div key={task.id} className="task-item bg-yellow-50">
+                    <div key={task.id} className="task-item bg-amber-950/40 border border-amber-500/40">
                       <div className="flex items-center gap-3">
                         <span className="text-xl">{task.type === 'homework' ? '📝' : task.type === 'practice' ? '🎨' : '✨'}</span>
                         <div className="flex-1">
-                          <div className="font-medium text-white">{task.name}</div>
+                          <div className="font-medium text-amber-200">{task.name}</div>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge color="primary">+{task.points}分</Badge>
-                            <Badge color="gray">待签字</Badge>
+                            <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">待签字</span>
                           </div>
                         </div>
                       </div>

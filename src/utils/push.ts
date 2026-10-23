@@ -1,13 +1,14 @@
 /**
- * PushMe 推送服务
+ * 多平台消息推送服务
  * 
- * 文档: https://push.i-i.me/docs
+ * 支持通道:
+ * 1. 飞书 (Feishu 自定义机器人 Webhook)
+ * 2. 企业微信 (WeCom 群机器人 Webhook)
+ * 3. Telegram (Bot Token + Chat ID)
+ * 4. PushMe (保留原版兼容)
  * 
- * 接口地址: https://push.i-i.me
- * 请求方式: GET 或 POST
- * 
- * 注意: 浏览器无法直接调用 PushMe API (CORS 限制)
- * 需要通过代理服务器转发请求
+ * 架构：通过本地 Node.js 后端服务 (http://localhost:3002/api/push) 统一中继分发，
+ * 彻底解决前端直接调用各大第三方 Webhook 的 CORS (跨域) 限制。
  */
 
 import { create } from 'zustand';
@@ -15,15 +16,50 @@ import { storage, STORAGE_KEYS } from './storage';
 
 // ============ 推送配置类型 ============
 
-export interface PushConfig {
-  /** PushMe 推送密钥 */
-  pushKey: string;
-  /** 是否启用推送 */
+export type ChannelType = 'feishu' | 'wecom' | 'telegram' | 'pushme';
+
+export interface FeishuChannelConfig {
+  webhookUrl: string;
   enabled: boolean;
+}
+
+export interface WeComChannelConfig {
+  webhookUrl: string;
+  enabled: boolean;
+}
+
+export interface TelegramChannelConfig {
+  botToken: string;
+  chatId: string;
+  proxyUrl?: string;
+  enabled: boolean;
+}
+
+export interface PushMeChannelConfig {
+  pushKey: string;
+  enabled: boolean;
+}
+
+export interface PushChannelsConfig {
+  feishu: FeishuChannelConfig;
+  wecom: WeComChannelConfig;
+  telegram: TelegramChannelConfig;
+  pushme: PushMeChannelConfig;
+}
+
+export interface PushConfig {
+  /** 全局是否启用推送 */
+  enabled: boolean;
+  /** 后端 API 地址 */
+  serverUrl: string;
+  /** 各通道配置 */
+  channels: PushChannelsConfig;
   /** 推送场景配置 */
   scenarios: PushScenarios;
-  /** 代理服务器地址 */
-  proxyUrl: string;
+
+  // 兼容旧字段
+  pushKey?: string;
+  proxyUrl?: string;
 }
 
 export interface PushScenarios {
@@ -40,13 +76,11 @@ export interface PushScenarios {
   extraPenalty: boolean; // 额外惩罚
 }
 
-export type PushMessageType = 'text' | 'markdown' | 'html' | 'data' | 'markdata' | 'chart' | 'echarts';
 export type PushTheme = 'info' | 'success' | 'warning' | 'failure';
 
 export interface PushMessage {
   title: string;
   content: string;
-  type?: PushMessageType;
   theme?: PushTheme;
   group?: string;
   avatar?: string;
@@ -56,9 +90,14 @@ export interface PushMessage {
 // ============ 默认配置 ============
 
 const DEFAULT_PUSH_CONFIG: PushConfig = {
-  pushKey: '',
   enabled: false,
-  proxyUrl: 'https://push-proxy.asd1231506.workers.dev',
+  serverUrl: 'http://localhost:3002',
+  channels: {
+    feishu: { webhookUrl: '', enabled: false },
+    wecom: { webhookUrl: '', enabled: false },
+    telegram: { botToken: '', chatId: '', proxyUrl: '', enabled: false },
+    pushme: { pushKey: '', enabled: false },
+  },
   scenarios: {
     newTask: true,
     taskSubmitted: true,
@@ -84,13 +123,26 @@ export class PushService {
   }
 
   loadConfig(): PushConfig {
-    const saved = storage.get<PushConfig>(STORAGE_KEYS.PUSH_CONFIG);
+    const saved = storage.get<any>(STORAGE_KEYS.PUSH_CONFIG);
     if (saved) {
-      // 合并默认值（处理旧数据缺失的字段）
+      // 迁移旧版单一 PushMe 配置
+      const oldPushKey = saved.pushKey || '';
+      const oldPushMeEnabled = saved.channels?.pushme?.enabled ?? (oldPushKey.length > 0 && (saved.enabled ?? true));
+
+      const feishu = saved.channels?.feishu || DEFAULT_PUSH_CONFIG.channels.feishu;
+      const wecom = saved.channels?.wecom || DEFAULT_PUSH_CONFIG.channels.wecom;
+      const telegram = saved.channels?.telegram || DEFAULT_PUSH_CONFIG.channels.telegram;
+      const pushme = {
+        pushKey: saved.channels?.pushme?.pushKey || oldPushKey,
+        enabled: oldPushMeEnabled,
+      };
+
+      const hasAnyChannelEnabled = feishu.enabled || wecom.enabled || telegram.enabled || pushme.enabled;
+
       return {
-        pushKey: saved.pushKey || '',
-        enabled: saved.enabled || false,
-        proxyUrl: saved.proxyUrl || DEFAULT_PUSH_CONFIG.proxyUrl,
+        enabled: saved.enabled !== undefined ? saved.enabled : hasAnyChannelEnabled,
+        serverUrl: saved.serverUrl || DEFAULT_PUSH_CONFIG.serverUrl,
+        channels: { feishu, wecom, telegram, pushme },
         scenarios: {
           ...DEFAULT_PUSH_CONFIG.scenarios,
           ...saved.scenarios,
@@ -109,19 +161,27 @@ export class PushService {
     return this.config;
   }
 
-  setPushKey(pushKey: string): void {
-    this.config.pushKey = pushKey;
-    this.config.enabled = pushKey.length > 0;
-    this.saveConfig(this.config);
-  }
-
-  setProxyUrl(proxyUrl: string): void {
-    this.config.proxyUrl = proxyUrl;
-    this.saveConfig(this.config);
-  }
-
   setEnabled(enabled: boolean): void {
     this.config.enabled = enabled;
+    this.saveConfig(this.config);
+  }
+
+  setServerUrl(serverUrl: string): void {
+    this.config.serverUrl = serverUrl;
+    this.saveConfig(this.config);
+  }
+
+  updateChannel<T extends ChannelType>(channel: T, channelConfig: Partial<PushChannelsConfig[T]>): void {
+    this.config.channels[channel] = {
+      ...this.config.channels[channel],
+      ...channelConfig,
+    } as any;
+    
+    // 如果启用了某个通道，自动同步启用全局开关
+    const hasEnabled = Object.values(this.config.channels).some((c: any) => c.enabled);
+    if (hasEnabled && !this.config.enabled) {
+      this.config.enabled = true;
+    }
     this.saveConfig(this.config);
   }
 
@@ -130,103 +190,83 @@ export class PushService {
     this.saveConfig(this.config);
   }
 
-  shouldPush(scenario: keyof PushScenarios): boolean {
-    return this.config.enabled && this.config.pushKey.length > 0 && this.config.scenarios[scenario];
+  // 检查是否有任何通道有效且开启
+  hasActiveChannels(): boolean {
+    if (!this.config.enabled) return false;
+    const { feishu, wecom, telegram, pushme } = this.config.channels;
+    return (
+      (feishu.enabled && !!feishu.webhookUrl) ||
+      (wecom.enabled && !!wecom.webhookUrl) ||
+      (telegram.enabled && !!telegram.botToken && !!telegram.chatId) ||
+      (pushme.enabled && !!pushme.pushKey)
+    );
   }
 
-  private buildTitle(message: PushMessage): string {
-    let title = message.title;
-
-    // 添加主题标识
-    if (message.theme) {
-      const themePrefix: Record<PushTheme, string> = {
-        info: '[i]',
-        success: '[s]',
-        warning: '[w]',
-        failure: '[f]',
-      };
-      title = themePrefix[message.theme] + title;
-    }
-
-    // 添加分组和头像
-    if (message.group) {
-      let groupTag = `[#${message.group}`;
-      if (message.avatar) {
-        groupTag += `!${message.avatar}`;
-      }
-      groupTag += ']';
-      title = title + groupTag;
-    }
-
-    return title;
+  shouldPush(scenario: keyof PushScenarios): boolean {
+    return this.hasActiveChannels() && !!this.config.scenarios[scenario];
   }
 
   /**
-   * 发送推送消息 (通过代理)
-   * 
-   * 由于浏览器 CORS 限制，需要通过代理服务器转发
-   * 推荐方案：部署自己的代理服务
-   * 
-   * 快速部署代理：
-   * - Cloudflare Workers: 免费，5分钟部署
-   * - Vercel: 免费，支持 Node.js
+   * 单通道连通性测试
    */
-  async send(message: PushMessage): Promise<{ success: boolean; error?: string }> {
-    if (!this.config.pushKey) {
-      return { success: false, error: '推送密钥未配置' };
-    }
+  async testChannel(channel: ChannelType, customConfig?: any): Promise<{ success: boolean; message: string }> {
+    const configToTest = customConfig || this.config.channels[channel];
+    const serverUrl = this.config.serverUrl || 'http://localhost:3002';
 
-    const title = this.buildTitle(message);
-    const params = new URLSearchParams({
-      push_key: this.config.pushKey,
-      title: title,
-      content: message.content,
-    });
+    try {
+      const response = await fetch(`${serverUrl}/api/push/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel,
+          config: configToTest,
+        }),
+      });
 
-    if (message.type) params.append('type', message.type);
-    if (message.date) params.append('date', message.date);
-
-    const body = params.toString();
-
-    // 优先使用用户配置的代理
-    const proxies = this.config.proxyUrl ? [this.config.proxyUrl] : [
-      // 默认代理
-      'https://push-proxy.asd1231506.workers.dev',
-      // 方案2: 自建代理地址 (推荐)
-      // 如果有自建代理，填在这里
-    ];
-
-    for (const proxyUrl of proxies) {
-      try {
-        const response = await fetch(proxyUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: body,
-        });
-
-        const result = await response.text();
-
-        if (result === 'success') {
-          console.log('[PushMe] 推送成功:', title);
-          return { success: true };
-        }
-
-        // 如果返回的是 HTML (被 Cloudflare 阻止)，继续尝试下一个代理
-        if (result.includes('<!DOCTYPE html>')) {
-          console.warn('[PushMe] 代理被阻止，尝试下一个...');
-          continue;
-        }
-
-        // 其他错误，直接返回
-        console.error('[PushMe] 推送失败:', result);
-        return { success: false, error: result };
-      } catch (err) {
-        console.warn('[PushMe] 代理请求失败:', err);
-        continue;
+      const data = await response.json();
+      if (response.ok && data.success) {
+        return { success: true, message: '测试消息发送成功！请检查相应应用中是否收到消息。' };
       }
+      return { success: false, message: data.error || '推送测试失败' };
+    } catch (err: any) {
+      return { success: false, message: `无法连接到本地推送服务 (${serverUrl}): ${err.message}` };
+    }
+  }
+
+  /**
+   * 多通道统一并发下发
+   */
+  async send(message: PushMessage): Promise<{ success: boolean; results?: any; error?: string }> {
+    if (!this.hasActiveChannels()) {
+      return { success: false, error: '未启用任何有效推送通道' };
     }
 
-    return { success: false, error: '所有代理都失败了，请部署自己的代理服务' };
+    const serverUrl = this.config.serverUrl || 'http://localhost:3002';
+
+    try {
+      const response = await fetch(`${serverUrl}/api/push/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channels: this.config.channels,
+          message: {
+            title: message.title,
+            content: message.content,
+            theme: message.theme || 'info',
+          },
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        console.log('[PushService] 多通道推送成功:', message.title, data.results);
+        return { success: true, results: data.results };
+      }
+      return { success: false, error: data.error || '部分或全部通道推送失败', results: data.results };
+    } catch (err: any) {
+      console.error('[PushService] 推送中继失败:', err);
+      return { success: false, error: `推送服务网络错误: ${err.message}` };
+    }
   }
 
   // ============ 业务场景推送方法 ============
@@ -234,130 +274,99 @@ export class PushService {
   async notifyNewTask(taskName: string, points: number, timeSlot?: string): Promise<void> {
     if (!this.shouldPush('newTask')) return;
     await this.send({
-      title: '新任务分配',
+      title: '📝 新任务分配',
       content: timeSlot ? `任务：${taskName}\n积分：${points}\n时间段：${timeSlot}` : `任务：${taskName}\n积分：${points}`,
       theme: 'info',
-      group: 'StudyPlan',
-      avatar: '📝',
     });
   }
 
   async notifyTaskSubmitted(taskName: string, childName: string): Promise<void> {
     if (!this.shouldPush('taskSubmitted')) return;
     await this.send({
-      title: '任务待审核',
-      content: `孩子「${childName}」已完成任务「${taskName}」，请及时审核确认。`,
+      title: '⏰ 任务待审核',
+      content: `孩子「${childName}」已提交打卡任务「${taskName}」，请家长尽快审核。`,
       theme: 'warning',
-      group: 'StudyPlan',
-      avatar: '⏰',
     });
   }
 
   async notifyTaskConfirmed(taskName: string, points: number): Promise<void> {
     if (!this.shouldPush('taskConfirmed')) return;
     await this.send({
-      title: '任务完成确认',
-      content: `任务「${taskName}」已确认通过！\n获得积分：${points}`,
+      title: '✅ 任务完成确认',
+      content: `任务「${taskName}」已审核通过！\n获得奖励：+${points} 积分 🌟`,
       theme: 'success',
-      group: 'StudyPlan',
-      avatar: '✅',
     });
   }
 
   async notifyTaskRejected(taskName: string, reason: string): Promise<void> {
     if (!this.shouldPush('taskRejected')) return;
     await this.send({
-      title: '任务审核拒绝',
-      content: `任务「${taskName}」被拒绝。\n拒绝原因：${reason}`,
+      title: '❌ 任务审核退回',
+      content: `任务「${taskName}」未通过审核。\n说明/原因：${reason}`,
       theme: 'failure',
-      group: 'StudyPlan',
-      avatar: '❌',
     });
   }
 
   async notifyRedemptionRequested(rewardName: string, cost: number, childName: string): Promise<void> {
     if (!this.shouldPush('redemptionRequested')) return;
     await this.send({
-      title: '奖励兑换申请',
-      content: `孩子「${childName}」申请兑换「${rewardName}」\n消耗积分：${cost}\n请及时处理。`,
+      title: '🎁 奖励兑换申请',
+      content: `孩子「${childName}」申请兑换「${rewardName}」\n需要消耗：${cost} 积分\n请前往家长端审批。`,
       theme: 'warning',
-      group: 'StudyPlan',
-      avatar: '🎁',
     });
   }
 
   async notifyRedemptionConfirmed(rewardName: string): Promise<void> {
     if (!this.shouldPush('redemptionConfirmed')) return;
     await this.send({
-      title: '兑换成功',
-      content: `恭喜！「${rewardName}」兑换成功！`,
+      title: '🎉 兑换申请通过',
+      content: `太棒了！奖励「${rewardName}」已成功兑换，记得及时兑现承诺哦～`,
       theme: 'success',
-      group: 'StudyPlan',
-      avatar: '🎉',
     });
   }
 
   async notifyRedemptionRejected(rewardName: string, reason: string): Promise<void> {
     if (!this.shouldPush('redemptionRejected')) return;
     await this.send({
-      title: '兑换申请拒绝',
-      content: `「${rewardName}」兑换申请被拒绝。\n原因：${reason}`,
+      title: '💔 兑换申请拒绝',
+      content: `奖励「${rewardName}」兑换申请被拒绝。\n原因：${reason}`,
       theme: 'failure',
-      group: 'StudyPlan',
-      avatar: '💔',
     });
   }
 
   async notifyPointsChanged(balance: number, change: number, description: string): Promise<void> {
     if (!this.shouldPush('pointsChanged')) return;
     await this.send({
-      title: '积分变动',
-      content: `${description}\n变动：${change > 0 ? '+' : ''}${change}\n当前余额：${balance}`,
+      title: '💰 积分变动通知',
+      content: `${description}\n变动：${change > 0 ? '+' : ''}${change}\n当前可用积分：${balance}`,
       theme: change > 0 ? 'success' : 'warning',
-      group: 'StudyPlan',
-      avatar: '💰',
     });
   }
 
-  /**
-   * 任务开始提醒 - 提前5分钟通知
-   */
   async notifyTaskStartReminder(taskName: string, timeSlot: string): Promise<void> {
     if (!this.shouldPush('taskStartReminder')) return;
     await this.send({
-      title: '要开始任务了',
-      content: `${timeSlot} ${taskName}（马上要开始的任务）`,
+      title: '⏰ 任务即将开始',
+      content: `规划时间段：${timeSlot}\n任务名称：${taskName}\n还有5分钟即将开始，请做好准备！`,
       theme: 'warning',
-      group: 'StudyPlan',
-      avatar: '⏰',
     });
   }
 
-  /**
-   * 额外奖励通知
-   */
   async notifyExtraReward(description: string, points: number): Promise<void> {
     if (!this.shouldPush('extraReward')) return;
     await this.send({
-      title: '额外奖励',
-      content: `恭喜获得额外奖励！\n原因：${description}\n积分：+${points}`,
+      title: '🌟 获得额外奖励',
+      content: `表现优秀！获得额外积分奖励！\n原因：${description}\n获得积分：+${points}`,
       theme: 'success',
-      group: 'StudyPlan',
-      avatar: '🎁',
     });
   }
 
-  /**
-   * 额外惩罚通知
-   */
   async notifyExtraPenalty(description: string, points: number): Promise<void> {
     if (!this.shouldPush('extraPenalty')) return;
     await this.send({
-      title: '额外惩罚',
-      content: `收到额外惩罚\n原因：${description}\n扣分：-${points}`,
+      title: '⚠️ 收到扣分提示',
+      content: `注意行为规范，已被扣除积分。\n原因：${description}\n扣除积分：-${points}`,
       theme: 'failure',
-      group: 'StudyPlan',
-      avatar: '⚠️',
     });
   }
 }
@@ -370,39 +379,29 @@ export const pushService = new PushService();
 
 interface PushState {
   config: PushConfig;
-  setPushKey: (key: string) => void;
-  setProxyUrl: (url: string) => void;
   setEnabled: (enabled: boolean) => void;
+  setServerUrl: (url: string) => void;
+  updateChannel: <T extends ChannelType>(channel: T, channelConfig: Partial<PushChannelsConfig[T]>) => void;
   updateScenarios: (scenarios: Partial<PushScenarios>) => void;
-  notifyNewTask: (taskName: string, points: number, timeSlot?: string) => Promise<void>;
-  notifyTaskSubmitted: (taskName: string, childName: string) => Promise<void>;
-  notifyTaskConfirmed: (taskName: string, points: number) => Promise<void>;
-  notifyTaskRejected: (taskName: string, reason: string) => Promise<void>;
-  notifyRedemptionRequested: (rewardName: string, cost: number, childName: string) => Promise<void>;
-  notifyRedemptionConfirmed: (rewardName: string) => Promise<void>;
-  notifyRedemptionRejected: (rewardName: string, reason: string) => Promise<void>;
-  notifyPointsChanged: (balance: number, change: number, description: string) => Promise<void>;
-  notifyTaskStartReminder: (taskName: string, timeSlot: string) => Promise<void>;
-  notifyExtraReward: (description: string, points: number) => Promise<void>;
-  notifyExtraPenalty: (description: string, points: number) => Promise<void>;
+  testChannel: (channel: ChannelType, customConfig?: any) => Promise<{ success: boolean; message: string }>;
   loadFromStorage: () => void;
 }
 
 export const usePushStore = create<PushState>((set) => ({
-  config: DEFAULT_PUSH_CONFIG,
-
-  setPushKey: (key) => {
-    pushService.setPushKey(key);
-    set({ config: pushService.getConfig() });
-  },
-
-  setProxyUrl: (url) => {
-    pushService.setProxyUrl(url);
-    set({ config: pushService.getConfig() });
-  },
+  config: pushService.getConfig(),
 
   setEnabled: (enabled) => {
     pushService.setEnabled(enabled);
+    set({ config: pushService.getConfig() });
+  },
+
+  setServerUrl: (url) => {
+    pushService.setServerUrl(url);
+    set({ config: pushService.getConfig() });
+  },
+
+  updateChannel: (channel, channelConfig) => {
+    pushService.updateChannel(channel, channelConfig);
     set({ config: pushService.getConfig() });
   },
 
@@ -411,52 +410,13 @@ export const usePushStore = create<PushState>((set) => ({
     set({ config: pushService.getConfig() });
   },
 
-  notifyNewTask: async (taskName, points, timeSlot) => {
-    await pushService.notifyNewTask(taskName, points, timeSlot);
-  },
-
-  notifyTaskSubmitted: async (taskName, childName) => {
-    await pushService.notifyTaskSubmitted(taskName, childName);
-  },
-
-  notifyTaskConfirmed: async (taskName, points) => {
-    await pushService.notifyTaskConfirmed(taskName, points);
-  },
-
-  notifyTaskRejected: async (taskName, reason) => {
-    await pushService.notifyTaskRejected(taskName, reason);
-  },
-
-  notifyRedemptionRequested: async (rewardName, cost, childName) => {
-    await pushService.notifyRedemptionRequested(rewardName, cost, childName);
-  },
-
-  notifyRedemptionConfirmed: async (rewardName) => {
-    await pushService.notifyRedemptionConfirmed(rewardName);
-  },
-
-  notifyRedemptionRejected: async (rewardName, reason) => {
-    await pushService.notifyRedemptionRejected(rewardName, reason);
-  },
-
-  notifyPointsChanged: async (balance, change, description) => {
-    await pushService.notifyPointsChanged(balance, change, description);
-  },
-
-  notifyTaskStartReminder: async (taskName, timeSlot) => {
-    await pushService.notifyTaskStartReminder(taskName, timeSlot);
-  },
-
-  notifyExtraReward: async (description, points) => {
-    await pushService.notifyExtraReward(description, points);
-  },
-
-  notifyExtraPenalty: async (description, points) => {
-    await pushService.notifyExtraPenalty(description, points);
+  testChannel: async (channel, customConfig) => {
+    return await pushService.testChannel(channel, customConfig);
   },
 
   loadFromStorage: () => {
     const config = pushService.loadConfig();
+    pushService.saveConfig(config);
     set({ config });
   },
 }));

@@ -12,6 +12,7 @@
 const express = require('express');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
+const pushService = require('./pushService');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -314,6 +315,42 @@ app.post('/api/migrate', requireMongo, async (req, res) => {
     res.json({ success: true, message: `迁移完成，共 ${items.length} 条数据` });
   } catch (error) {
     console.error('MIGRATE error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============ 多通道消息推送路由 ============
+
+/**
+ * 单通道测试
+ */
+app.post('/api/push/test', async (req, res) => {
+  try {
+    const { channel, config } = req.body;
+    if (!channel || !config) {
+      return res.status(400).json({ success: false, error: '缺少 channel 或 config 参数' });
+    }
+    const result = await pushService.testChannel(channel, config);
+    res.json(result);
+  } catch (error) {
+    console.error('Push test error:', error);
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * 多通道聚合发送
+ */
+app.post('/api/push/send', async (req, res) => {
+  try {
+    const { channels, message } = req.body;
+    if (!message || !message.title || !message.content) {
+      return res.status(400).json({ success: false, error: '消息体格式不完整' });
+    }
+    const result = await pushService.dispatch(channels, message);
+    res.json(result);
+  } catch (error) {
+    console.error('Push send error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
