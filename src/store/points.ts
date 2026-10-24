@@ -71,6 +71,10 @@ export const usePointsStore = create<PointsState>((set, get) => ({
     const records = [...get().records, record];
     storage.set(STORAGE_KEYS.POINTS_RECORDS, records);
     set({ records });
+
+    // 触发积分变动通知
+    pushService.notifyPointsChanged(data.balanceAfter, data.points, data.description);
+
     return record;
   },
 

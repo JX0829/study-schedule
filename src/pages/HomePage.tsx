@@ -35,6 +35,8 @@ function getEndTimeString(startTime: string) {
   return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
 }
 
+import { pushService } from '@/utils/push';
+
 export function HomePage() {
   const [currentDate, setCurrentDate] = useState(getToday());
   const [activeTab, setActiveTab] = useState('tasks');
@@ -213,6 +215,10 @@ export function HomePage() {
       timeSlotEnd: customEndTime,
       status: 'pending',
     });
+
+    // 触发推送通知家长（新任务创建）
+    const timeSlot = customStartTime && customEndTime ? `${customStartTime}-${customEndTime}` : undefined;
+    pushService.notifyNewTask(template.name, template.points, timeSlot);
     
     setShowAddTask(false);
   };
@@ -932,6 +938,8 @@ export function HomePage() {
                     });
                     // 奖励积分立即入账
                     earnPoints(child.id, template.points, '', `奖励: ${template.name}`);
+                    // 触发推送
+                    pushService.notifyNewTask(`🎁 ${template.name}`, template.points, '即时');
                   }
                 });
                 // 添加选中的惩罚任务
@@ -952,6 +960,8 @@ export function HomePage() {
                     });
                     // 惩罚积分立即扣除
                     earnPoints(child.id, template.points, '', `惩罚: ${template.name}`);
+                    // 触发推送
+                    pushService.notifyNewTask(`⚠️ ${template.name}`, template.points, '即时');
                   }
                 });
                 // 重置选择并关闭模态框

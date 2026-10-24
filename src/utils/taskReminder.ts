@@ -22,7 +22,7 @@ let reminderIntervalId: number | null = null;
  */
 function checkUpcomingTasks(): void {
   const config = pushService.getConfig();
-  if (!config.enabled || !config.pushKey || !config.scenarios.taskStartReminder) {
+  if (!config.enabled || !pushService.hasActiveChannels() || !config.scenarios.taskStartReminder) {
     return;
   }
 
@@ -99,7 +99,7 @@ export function clearRemindedCache(): void {
  */
 export function getNextUpcomingTask(): { name: string; timeSlot: string; minutesUntil: number } | null {
   const config = pushService.getConfig();
-  if (!config.enabled || !config.scenarios.taskStartReminder) {
+  if (!config.enabled || !pushService.hasActiveChannels() || !config.scenarios.taskStartReminder) {
     return null;
   }
 
