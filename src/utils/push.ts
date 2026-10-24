@@ -91,7 +91,7 @@ export interface PushMessage {
 
 const DEFAULT_PUSH_CONFIG: PushConfig = {
   enabled: false,
-  serverUrl: 'http://localhost:3002',
+  serverUrl: '',
   channels: {
     feishu: { webhookUrl: '', enabled: false },
     wecom: { webhookUrl: '', enabled: false },
@@ -139,9 +139,15 @@ export class PushService {
 
       const hasAnyChannelEnabled = feishu.enabled || wecom.enabled || telegram.enabled || pushme.enabled;
 
+      // 如果之前保存过旧版硬编码的 http://localhost:3002，自动清洗为相对路径 ''
+      let serverUrl = saved.serverUrl || '';
+      if (serverUrl === 'http://localhost:3002' || serverUrl === 'http://127.0.0.1:3002') {
+        serverUrl = '';
+      }
+
       return {
         enabled: saved.enabled !== undefined ? saved.enabled : hasAnyChannelEnabled,
-        serverUrl: saved.serverUrl || DEFAULT_PUSH_CONFIG.serverUrl,
+        serverUrl: serverUrl,
         channels: { feishu, wecom, telegram, pushme },
         scenarios: {
           ...DEFAULT_PUSH_CONFIG.scenarios,
@@ -211,7 +217,10 @@ export class PushService {
    */
   async testChannel(channel: ChannelType, customConfig?: any): Promise<{ success: boolean; message: string }> {
     const configToTest = customConfig || this.config.channels[channel];
-    const serverUrl = this.config.serverUrl || 'http://localhost:3002';
+    let serverUrl = (this.config.serverUrl || '').trim();
+    if (serverUrl === 'http://localhost:3002' || serverUrl === 'http://127.0.0.1:3002') {
+      serverUrl = '';
+    }
 
     try {
       const response = await fetch(`${serverUrl}/api/push/test`, {
@@ -229,7 +238,7 @@ export class PushService {
       }
       return { success: false, message: data.error || '推送测试失败' };
     } catch (err: any) {
-      return { success: false, message: `无法连接到本地推送服务 (${serverUrl}): ${err.message}` };
+      return { success: false, message: `无法连接到推送服务 (${serverUrl || '当前同源服务'}): ${err.message}` };
     }
   }
 
@@ -241,7 +250,10 @@ export class PushService {
       return { success: false, error: '未启用任何有效推送通道' };
     }
 
-    const serverUrl = this.config.serverUrl || 'http://localhost:3002';
+    let serverUrl = (this.config.serverUrl || '').trim();
+    if (serverUrl === 'http://localhost:3002' || serverUrl === 'http://127.0.0.1:3002') {
+      serverUrl = '';
+    }
 
     try {
       const response = await fetch(`${serverUrl}/api/push/send`, {
