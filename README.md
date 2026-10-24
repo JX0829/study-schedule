@@ -1,87 +1,123 @@
-# StudyPlan - 小朋友每日任务规划系统
+<div align="center">
 
-基于 React + Vite + TypeScript 开发的家庭儿童任务管理工具，帮助家长科学规划孩子的每日任务，通过积分激励机制培养孩子良好的学习和生活习惯。
+# 📚 StudyPlan (study-schedule)
 
-## 产品特性
+**Daily Task Management & Positive Habit Building System for Kids**  
+**小朋友每日任务规划与习惯培养激励系统**
 
-本项目采用一套代码支持双端独立应用（通过一套 Vite 配置共享业务逻辑和组件）：
-- **孩子端 (Child UI)**：极简且带有激励反馈的界面，方便孩子查看当日任务、提交完成申请、查看当前积分与兑换奖励。
-- **家长端 (Parent UI)**：全面的管理后台，支持任务模板配置、当日任务分配、积分系统设置、完成审核及统计报表查看。
+[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
+[![Related Project: autocontent-pipeline](https://img.shields.io/badge/Companion%20Project-autocontent--pipeline-rose.svg)](https://github.com/JX0829/autocontent-pipeline)
+[![React 18](https://img.shields.io/badge/React-18.x-61DAFB.svg?logo=react&logoColor=black)](https://react.dev/)
+[![Vite 5](https://img.shields.io/badge/Vite-5.x-646CFF.svg?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TypeScript 5](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Multi-Channel Push](https://img.shields.io/badge/Push-Feishu%20%7C%20WeCom%20%7C%20TG%20%7C%20PushMe-brightgreen.svg)](#-multi-channel-push--多平台即时通知)
 
-### 核心功能模块
+<p align="center">
+  <a href="#english">English</a> •
+  <a href="#chinese">中文</a> •
+  <a href="#tech-stack">Tech Stack / 技术选型</a> •
+  <a href="https://github.com/JX0829/autocontent-pipeline">🔗 AutoContent-Pipeline Repository</a>
+</p>
 
-- **任务管理**：分为作业、练习、习惯三类，支持预设任务模板、快捷规划当日任务和自定义时间段划分。移除惩罚扣分机制，全方位正向激励。
-- **积分系统**：完成任务赚取积分。支持积分上限及锁定机制（兑换奖励时锁定，家长审核后扣除）。
-- **奖励兑换**：家长配置奖励库，孩子自主申请兑换，涵盖完整的确认和超时自动确认业务流。
-- **消息提醒**：采用 PushMe 搭配自建 Proxy 推送提醒（包括任务提醒、超时提醒、家长审核通知等）。
-- **云端存储同步**：数据流架构已由早期的纯 LocalStorage 演进为 **“MongoDB 云端持久化 + 内存缓存 + LocalStorage 备份”** 架构，实现了多端数据互通，并保留了离线缓存能力。
+</div>
 
-## 技术选型
+---
 
-- **核心框架**: React 18
-- **构建工具**: Vite 5
-- **语言**: TypeScript 5
-- **状态管理**: Zustand (集成内存缓存和多级存储机制)
-- **样式方案**: Tailwind CSS + PostCSS
-- **后端服务**: Node.js + Express + MongoDB (位于 `server/` 目录，提供持久化 API)
+<a name="english"></a>
+## 🌐 English Overview
 
-## 快速开始
+**StudyPlan** is a dual-interface habit-building and daily task planner designed for families. Built with modern web technologies (React 18 + Vite 5 + TypeScript), it helps parents create balanced schedules while encouraging kids with positive point incentives and gamified rewards.
 
-### 前提条件
+### 🌟 Key Highlights
 
-- Node.js (建议 v18+)
-- MongoDB (本地或云端实例)
+- 🧒 **Child UI (`/`)**: A gamified, distraction-free portal with cosmic dark-mode aesthetics. Kids can check upcoming homework/habits, submit completed tasks with one tap, track accumulated points, and request reward redemptions.
+- 👨‍👩‍👧 **Parent Dashboard (`/parent/index.html`)**: A comprehensive management panel for task templates, point rules, daily assignments, completion verification, and review history.
+- 📬 **Multi-Channel Push Notifications**: Built-in relay engine supporting instant notifications across **Feishu (Lark)**, **WeCom (Enterprise WeChat)**, **Telegram**, and **PushMe** with zero client CORS issues.
+- ☁️ **Hybrid Cloud Sync**: Modernized storage architecture combining MongoDB cloud persistence, in-memory caching, and localStorage fallbacks for offline support.
+- 🛡️ **Positive Reinforcement**: Zero-penalty philosophy focused on celebrating consistency and achievements.
 
-### 1. 启动后端服务 (持久化数据层)
+### 📁 Companion Project
+- Check out [**autocontent-pipeline**](https://github.com/JX0829/autocontent-pipeline) — an end-to-end automated tech short video production engine (Remotion 4.x + Feishu HITL cards + Playwright) by the same author!
 
-由于已迁移至 MongoDB 作为主力存储，使用前需启动后端服务。默认连接地址为 `mongodb://localhost:27017`（也可通过 `server/.env` 或环境变量 `MONGO_URL` 修改）。
+---
+
+<a name="chinese"></a>
+## 🇨🇳 中文说明
+
+**StudyPlan** 是一套基于 React + Vite + TypeScript 开发的家庭儿童任务管理与习惯养成系统。通过同一套工程代码支持双端独立应用与组件复用，帮助家长科学规划孩子的每日作业与生活习惯。
+
+### 🌟 核心特性
+
+- 🧒 **孩子端 (`/`)**：深色太空科技风激励界面，孩子可清晰查看当日待办、提交打卡签字、查看积分余额并自主申请兑换心仪奖励。
+- 👨‍👩‍👧 **家长端 (`/parent/index.html`)**：功能完善的后台管理，涵盖任务模板配置、每日任务编排、积分增减、打卡审核与兑换核验。
+- 📬 **多通道即时推送**：内置 Node.js 中继引擎，支持**飞书富文本卡片**、**企业微信 Markdown**、**Telegram 机器人**及 **PushMe** 聚合推送，彻底杜绝前端跨域与移动端网络限制。
+- ☁️ **多级存储架构**：采用“MongoDB 云端持久化 + 内存快速缓存 + 本地 LocalStorage 备份”多级存储，支持多设备跨端实时互通。
+- 🛡️ **全面正向激励**：告别惩罚扣分机制，以积极正向的积分回馈培养自律好习惯。
+
+### 📁 关联姊妹项目
+- 欢迎探索 [**autocontent-pipeline**](https://github.com/JX0829/autocontent-pipeline) — 基于 Remotion 4.x 纯代码渲染、飞书 HITL 移动端审批与全自动分发的短视频生产流水线！
+
+---
+
+<a name="tech-stack"></a>
+## 🛠️ Tech Stack / 技术选型
+
+- **Frontend**: React 18, Vite 5, TypeScript 5, Tailwind CSS, Lucide Icons
+- **State Management**: Zustand (Multi-tier cache & persistence)
+- **Backend / Relay**: Node.js, Express, MongoDB (located under `server/`)
+- **Push Engine**: Native fetch relay supporting Feishu Webhook, WeCom Webhook, Telegram Bot API, and PushMe
+
+---
+
+## 🚀 Quick Start / 快速上手
+
+### 1. Requirements / 环境要求
+- Node.js (v18+ recommended)
+- MongoDB (Local or remote instance)
+
+### 2. Start Backend Server / 启动后端服务
 
 ```bash
 cd server
 npm install
-# 启动后端服务 (默认运行在 3002 端口)
 npm start
+# Runs on http://localhost:3002 by default
 ```
-*提示：了解详情或执行数据迁移请参考 [MongoDB 迁移说明](./MONGODB_GUIDE.md)。*
 
-### 2. 启动前端双端应用
-
-在项目根目录下执行：
+### 3. Start Frontend Dual-App / 启动前端双端应用
 
 ```bash
+# Return to project root
+cd ..
 npm install
-
-# 启动开发服务器
 npm run dev
-# 或分别打印端点信息: npm run dev:all
+# Default listening on http://localhost:3333
 ```
 
-前端服务通过代理将 `/api` 转发至后端，并在同端口挂载两套页面（默认 `http://localhost:3333`）：
-- **孩子端入口**: `http://localhost:3333/`
-- **家长端入口**: `http://localhost:3333/parent/index.html`
+- **Child UI / 孩子端**: `http://localhost:3333/`
+- **Parent UI / 家长端**: `http://localhost:3333/parent/index.html`
 
-### 3. 配置推送代理 (可选)
+---
 
-由于浏览器存在 CORS 跨域限制，前端无法直接向 PushMe 发起调用请求。如果需要启用推送提醒功能，请参考 [PushMe 代理部署指南](./PUSH_PROXY_GUIDE.md) 部署免费的 Cloudflare Worker，并在 `src/utils/push.ts` 中配置你自己的代理地址。
-
-## 核心目录结构
+## 📁 Directory Structure / 目录结构
 
 ```text
 .
-├── server/                 # Node.js/MongoDB 后端服务 (提供存储与同步 API)
-├── src/                    # 前端核心源码 (业务逻辑、状态、孩子端及共享组件)
-│   ├── components/         # 业务与基础 UI 组件 (Tailwind + React)
-│   ├── pages/              # 孩子端页面及家长端各业务模块页面
-│   ├── store/              # Zustand 状态管理库 (Task, Points, Reward, Family...)
-│   ├── types/              # TypeScript 类型定义
-│   └── utils/              # 工具函数 (包含 MongoDB 同步、缓存、推送封装等)
-├── parent/                 # 家长端应用入口文件
-├── requirements/           # 产品需求文档 (PRD)，包含详尽的系统设计
-├── MONGODB_GUIDE.md        # 数据库使用及迁移操作指南
-└── PUSH_PROXY_GUIDE.md     # PushMe 推送代理部署说明
+├── server/                 # Node.js/MongoDB 后端与消息推送分发服务
+│   ├── index.js            # Express API 服务入口
+│   └── pushService.js      # 飞书/企微/TG/PushMe 聚合分发引擎
+├── src/                    # 前端核心源码
+│   ├── components/         # 业务与 UI 组件 (Tailwind + React)
+│   ├── pages/              # 孩子端页面及家长端模块页面
+│   ├── store/              # Zustand 状态仓库 (任务、积分、家庭)
+│   ├── types/              # TypeScript 核心类型定义
+│   └── utils/              # MongoDB 同步、存储适配器与推送模块
+├── parent/                 # 家长端入口文件
+└── dist/                   # 生产打包产物
 ```
 
-## 部署建议
+---
 
-- **前端应用构建**：运行 `npm run build`，Vite 将通过 `rollupOptions.input` 分别将主端和 `parent/` 目录的资源打包至 `dist/`，可统一部署到 Nginx, Vercel 或 Netlify 等静态托管平台。
-- **后端 API 服务**：将 `server/` 部署至 Node 环境（搭配 PM2 或 Docker），并将前端的 `/api` 请求反向代理至该服务。
+## 📄 License / 开源协议
+
+Released under the [MIT License](LICENSE).
