@@ -35,6 +35,7 @@ export function ParentPage() {
   const dailyTasks = useTaskStore(s => s.dailyTasks);
   const getDailyTasksByDate = useTaskStore(s => s.getDailyTasksByDate);
   const updateDailyTaskStatus = useTaskStore(s => s.updateDailyTaskStatus);
+  const confirmTask = useTaskStore(s => s.confirmTask);
   const deleteDailyTask = useTaskStore(s => s.deleteDailyTask);
   const addDailyTask = useTaskStore(s => s.addDailyTask);
   const redemptionRecords = useRewardStore(s => s.redemptionRecords);
@@ -137,9 +138,7 @@ export function ParentPage() {
 
   const handleDirectConfirmTask = (task: DailyTask) => {
     if (!child || !parent) return;
-    updateDailyTaskStatus(task.id, 'completed', {
-      confirmedAt: new Date().toISOString(), confirmedBy: parent.id,
-    });
+    confirmTask(task.id, parent.id);
     earnPoints(child.id, task.points, task.id, `完成任务: ${task.name}`);
   };
 

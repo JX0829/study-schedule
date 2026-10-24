@@ -93,6 +93,8 @@ export function HomePage() {
   const getDailyTasksByDate = useTaskStore(state => state.getDailyTasksByDate);
   const addDailyTask = useTaskStore(state => state.addDailyTask);
   const updateDailyTaskStatus = useTaskStore(state => state.updateDailyTaskStatus);
+  const submitTask = useTaskStore(state => state.submitTask);
+  const confirmTask = useTaskStore(state => state.confirmTask);
   const deleteDailyTask = useTaskStore(state => state.deleteDailyTask);
   const getChildPoints = usePointsStore(state => state.getChildPoints);
   const getPointsRecords = usePointsStore(state => state.getPointsRecords);
@@ -236,11 +238,9 @@ export function HomePage() {
     setShowAddTask(true);
   };
   
-  // 标记完成（自己确认）
+  // 标记完成（提交给家长签字，触发通知）
   const handleMarkComplete = (taskId: string) => {
-    updateDailyTaskStatus(taskId, 'submitted', {
-      completedAt: new Date().toISOString(),
-    });
+    submitTask(taskId);
   };
   
   // 标记未完成
@@ -261,11 +261,8 @@ export function HomePage() {
     const task = todayTasks.find(t => t.id === selectedTaskId);
     if (!task) return;
     
-    // 更新任务状态为已完成
-    updateDailyTaskStatus(selectedTaskId, 'completed', {
-      confirmedAt: new Date().toISOString(),
-      confirmedBy: parent?.id || 'parent',
-    });
+    // 确认任务完成（内置推送通知孩子）
+    confirmTask(selectedTaskId, parent?.id || 'parent');
     
     // 积分入账
     earnPoints(child.id, task.points, selectedTaskId, `完成任务: ${task.name}`);
